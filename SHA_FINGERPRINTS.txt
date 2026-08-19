@@ -1,0 +1,18 @@
+PesaFlow — Android signing fingerprints (paste into Firebase → Project settings → your Android app → Add fingerprint)
+
+DEBUG keystore (used by Android Studio ▶ and `npx cap run android`):
+
+SHA-1:
+B8:A2:67:80:C5:6C:29:15:08:5E:A1:51:CE:2B:FB:23:C8:6E:61:CB
+
+SHA-256:
+9E:AF:61:EC:58:7C:E2:46:A7:EC:01:0E:8A:3E:B8:8A:99:36:B5:07:FA:26:85:B8:39:30:22:D2:88:2C:4B:DC
+
+------------------------------------------------------------------
+NOTE: This is the DEBUG certificate. If you distribute a RELEASE-signed
+APK/AAB, also add the RELEASE keystore's SHA-1:
+    keytool -list -v -keystore <your-release.keystore> -alias <your-alias>
+(and the Play App Signing SHA-1 from Play Console if you use Play App Signing).
+
+After adding the fingerprint in Firebase, re-download google-services.json and
+replace android/app/google-services.json, then: npm run build && npx cap sync android

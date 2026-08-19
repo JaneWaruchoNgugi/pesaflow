@@ -246,7 +246,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin 
 
       {/* ─── Why PesaFlow ─────────────────────────────── */}
       <section id="why" style={S.section}>
-        <div style={S.sectionLabel}>WHY FINWISE</div>
+        <div style={S.sectionLabel}>WHY PESAFLOW</div>
         <h2 style={S.sectionTitle}>A personal finance workspace<br className="lp-brk" /> that feels calm, useful, and complete.</h2>
         <div className="lp-grid-3" style={S.grid3}>
           {VALUE_POINTS.map(v => {
@@ -342,7 +342,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin 
 
       {/* ─── Testimonials ────────────────────────────── */}
       <section style={S.section}>
-        <div style={S.sectionLabel}>WHY THOUSANDS OF KENYANS TRUST FINWISE</div>
+        <div style={S.sectionLabel}>WHY THOUSANDS OF KENYANS TRUST PESAFLOW</div>
         <div className="lp-grid-3" style={{ ...S.grid3, marginTop: 8 }}>
           {MINI_TRUST.map(m => {
             const Icon = m.icon;
@@ -548,6 +548,14 @@ const CSS = `
   }
   @media (max-width: 620px) {
     .lp-stats-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+  @media (max-width: 480px) {
+    .lp-stats-grid { gap: 8px !important; }
+    .lp-preview-side { display: none !important; }   /* give the dashboard preview full width */
+    .lp-nav-actions .lp-btn, .lp-mobile-actions .lp-btn { padding: 8px 12px !important; font-size: 13px !important; }
+  }
+  @media (max-width: 360px) {
+    .lp-stats-grid { grid-template-columns: 1fr !important; }
   }
 `;
 

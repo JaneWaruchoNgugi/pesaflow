@@ -43,10 +43,10 @@ const PinInput: React.FC<{
         style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', top: 0, left: 0, cursor: 'pointer' }}
         autoFocus={autoFocus}
       />
-      <div style={{ display: 'flex', gap: 9, justifyContent: 'center', padding: '12px 0' }}>
+      <div style={{ display: 'flex', gap: 'clamp(5px, 1.6vw, 9px)', justifyContent: 'center', padding: '12px 0' }}>
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <div key={i} style={{
-            width: 46, height: 52, borderRadius: 14,
+            width: 'clamp(30px, 10.5vw, 46px)', height: 'clamp(38px, 13vw, 52px)', borderRadius: 14,
             background: error ? 'rgba(220,38,38,0.08)' : i < value.length ? 'rgba(167,139,250,0.18)' : 'rgba(167,139,250,0.10)',
             border: `2px solid ${error ? 'rgba(220,38,38,0.4)' : i < value.length ? 'rgba(167,139,250,0.7)' : 'rgba(167,139,250,0.35)'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
@@ -290,9 +290,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({
 };
 
 const S: Record<string, React.CSSProperties> = {
-  overlay:  { position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  overlay:  { position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 4vw, 24px)' },
   bg:       { position: 'absolute', inset: 0, background: 'var(--bg-page)' },
-  card:     { position: 'relative', background: 'var(--bg-card)', border: '1px solid var(--border-acc)', borderRadius: 20, padding: '36px 32px', width: '100%', maxWidth: 380, boxShadow: 'var(--shadow-lg)' },
+  card:     { position: 'relative', background: 'var(--bg-card)', border: '1px solid var(--border-acc)', borderRadius: 20, padding: 'clamp(24px, 6vw, 36px) clamp(18px, 5vw, 32px)', width: '100%', maxWidth: 380, boxShadow: 'var(--shadow-lg)' },
   logoRow:  { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 },
   logoMark: { width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(145deg, var(--gold), var(--gold-l))', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   logoSym:  { fontFamily: 'Cormorant Garamond, serif', fontSize: 22, fontWeight: 800, color: '#0A1628' },

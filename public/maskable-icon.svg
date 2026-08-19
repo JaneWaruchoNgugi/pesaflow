@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="pf-flow-m" x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#F7941E"/>
+      <stop offset="1" stop-color="#EE3E2B"/>
+    </linearGradient>
+  </defs>
+  <!-- Full-bleed background for safe maskable cropping -->
+  <rect width="512" height="512" fill="#FFF8F1"/>
+  <!-- Logo mark scaled into the center safe zone (~80%) -->
+  <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+    <path d="M236 106 H352 a112 112 0 0 1 0 224" stroke="url(#pf-flow-m)" stroke-width="46" stroke-linecap="round" fill="none"/>
+    <rect x="150" y="300" width="46" height="120" rx="14" fill="#F9B77F"/>
+    <rect x="212" y="248" width="46" height="172" rx="14" fill="#F5872B"/>
+    <rect x="274" y="192" width="46" height="228" rx="14" fill="#EE4127"/>
+    <path d="M150 404 Q 250 388 338 216" stroke="#12314C" stroke-width="26" stroke-linecap="round" fill="none"/>
+    <path d="M300 210 L372 190 L352 262 Z" fill="#12314C"/>
+  </g>
+</svg>

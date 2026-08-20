@@ -115,7 +115,12 @@ const App: React.FC = () => {
   }
 
   // ── Stage: Landing ──────────────────────────────────────
-  if (auth.status !== 'ready' && stage === 'landing') {
+  // Only genuinely signed-out visitors see the marketing page. A signed-in user who
+  // still needs to finish onboarding (e.g. 'needs-phone' after Google sign-in) must
+  // NOT be sent here — on mobile, signInWithRedirect reloads the page and resets
+  // `stage` back to 'landing', which previously bounced them to the landing page
+  // instead of the add-phone step / dashboard.
+  if (auth.status === 'signed-out' && stage === 'landing') {
     return (
       <ThemeProvider>
         <LandingPage

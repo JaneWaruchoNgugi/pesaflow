@@ -115,8 +115,10 @@ const App: React.FC = () => {
       el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#111;color:#0f0;font:11px/1.4 monospace;padding:4px 6px;white-space:pre-wrap;word-break:break-all;opacity:0.92';
       document.body.appendChild(el);
     }
-    const uid = auth.firebaseUser?.uid ? auth.firebaseUser.uid.slice(0, 6) : 'none';
-    el.textContent = `DBGv8 | stage=${stage} | status=${auth.status} | uid=${uid} | phone=${auth.profile?.phone || '-'}\nhist: ${dbgHist.current.join(' → ')}`;
+    // Mask PII: show only whether a uid/phone exist, never their values.
+    const uid = auth.firebaseUser ? 'yes' : 'no';
+    const phone = auth.profile?.phone ? 'set' : '-';
+    el.textContent = `DBGv9 | stage=${stage} | status=${auth.status} | signedIn=${uid} | phone=${phone}\nhist: ${dbgHist.current.join(' → ')}`;
   }, [auth.status, stage, auth.firebaseUser, auth.profile]);
 
   // ── Stage: Loading ──────────────────────────────────────

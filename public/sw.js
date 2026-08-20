@@ -1,5 +1,5 @@
 // Bump this on any change to the caching strategy to purge old caches on activate.
-const CACHE_NAME = 'pesaflow-shell-v4';
+const CACHE_NAME = 'pesaflow-shell-v5';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/finwise-icon.svg', '/maskable-icon.svg'];
 
 self.addEventListener('install', (event) => {

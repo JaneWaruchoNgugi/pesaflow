@@ -3,9 +3,19 @@ import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
+// On the deployed site we serve Firebase's auth handler from our OWN origin via a
+// reverse proxy (see vercel.json: /__/auth/* -> finwise-948c8.firebaseapp.com). Using
+// the app's own hostname as authDomain keeps signInWithRedirect / the auth iframe
+// same-origin, which is required for Google sign-in to survive the redirect on mobile
+// browsers (they block the cross-origin storage the handshake needs). Locally we fall
+// back to the standard Firebase authDomain so popup sign-in keeps working in dev.
+const runtimeHost = typeof window !== 'undefined' ? window.location.hostname : '';
+const isLocalHost = runtimeHost === 'localhost' || runtimeHost === '127.0.0.1' || runtimeHost === '';
+const resolvedAuthDomain = isLocalHost ? import.meta.env.VITE_FIREBASE_AUTH_DOMAIN : runtimeHost;
+
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  authDomain:        resolvedAuthDomain,
   projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,

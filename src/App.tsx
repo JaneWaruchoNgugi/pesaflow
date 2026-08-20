@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, Bell, Bot, Crown, Download, Landmark, Lock, ReceiptText, Shield, Sparkles, TrendingUp } from 'lucide-react';
 import './styles/globals.css';
 import type { AppView, SubscriptionTier } from './types';
@@ -99,6 +99,25 @@ const App: React.FC = () => {
     setSelectedTier(tier);
     setStage('payment');
   };
+
+  // ── TEMP on-screen diagnostic ───────────────────────────
+  // Renders a fixed badge (outside React's returned tree) showing the live auth
+  // status transitions + stage, so we can see on a real phone exactly where the
+  // Google → add-phone → dashboard flow breaks. Remove once diagnosed.
+  const dbgHist = useRef<string[]>([]);
+  useEffect(() => {
+    const last = dbgHist.current[dbgHist.current.length - 1];
+    if (last !== auth.status) dbgHist.current = [...dbgHist.current, auth.status].slice(-8);
+    let el = document.getElementById('__pf_dbg');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__pf_dbg';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:#111;color:#0f0;font:11px/1.4 monospace;padding:4px 6px;white-space:pre-wrap;word-break:break-all;opacity:0.92';
+      document.body.appendChild(el);
+    }
+    const uid = auth.firebaseUser?.uid ? auth.firebaseUser.uid.slice(0, 6) : 'none';
+    el.textContent = `DBGv8 | stage=${stage} | status=${auth.status} | uid=${uid} | phone=${auth.profile?.phone || '-'}\nhist: ${dbgHist.current.join(' → ')}`;
+  }, [auth.status, stage, auth.firebaseUser, auth.profile]);
 
   // ── Stage: Loading ──────────────────────────────────────
   // While Firebase restores the persisted session, show a neutral splash instead of

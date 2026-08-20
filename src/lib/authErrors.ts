@@ -12,6 +12,8 @@ const MESSAGES: Record<string, string> = {
   'auth/network-request-failed': 'Network error. Check your connection and try again.',
   'auth/popup-closed-by-user': 'Google sign-in was cancelled.',
   'auth/cancelled-popup-request': 'Google sign-in was cancelled.',
+  // This domain isn't in Firebase Auth → Settings → Authorized domains. Add it there.
+  'auth/unauthorized-domain': 'This site isn’t authorized for Google sign-in yet. Please contact support.',
 };
 
 export const mapAuthError = (err: unknown, fallback: string): string => {

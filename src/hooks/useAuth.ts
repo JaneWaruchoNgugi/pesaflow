@@ -136,11 +136,7 @@ export const useAuth = () => {
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => { if (result?.user) return completeGoogleSignIn(result.user); })
-      // TEMP DIAGNOSTIC: surface the raw code/message from the return leg. Revert later.
-      .catch((e) => {
-        const d = e as { code?: string; message?: string };
-        setError(`Google sign-in failed [return]: ${d?.code || d?.message || String(e)}`);
-      });
+      .catch((e) => setError(mapAuthError(e, 'Google sign-in failed. Please try again.')));
   }, [completeGoogleSignIn]);
 
   // Cache the profile so the sync layer can resolve the uid synchronously on reload.
@@ -225,10 +221,7 @@ export const useAuth = () => {
         throw e;
       }
     } catch (e) {
-      // TEMP DIAGNOSTIC: surface the raw Firebase code/message so we can see the real
-      // failure on mobile (no console access). Revert to mapAuthError once diagnosed.
-      const d = e as { code?: string; message?: string };
-      setError(`Google sign-in failed [start]: ${d?.code || d?.message || String(e)}`);
+      setError(mapAuthError(e, 'Google sign-in failed. Please try again.'));
       return false;
     } finally { setLoading(false); }
   }, [completeGoogleSignIn]);

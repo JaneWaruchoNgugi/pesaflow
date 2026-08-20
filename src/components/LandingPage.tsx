@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowRight, Bell, Bot, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight,
-  CircleDollarSign, Crown, Download, Layers3, LineChart,
+  CircleDollarSign, Crown, Layers3, LineChart,
   LockKeyhole, Menu, PieChart, Quote, ReceiptText, Shield, Sparkles, Star, Target,
   TrendingUp, Users, WalletCards, X, XCircle,
 } from 'lucide-react';
@@ -18,7 +18,10 @@ const SOCIAL_ICONS: React.FC<{ size?: number }>[] = [
 
 type IconComponent = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
 
-const ANDROID_APK_URL = '/downloads/finwise-android.apk';
+// APK download disabled until we ship via Google Play. To restore: re-add `Download`
+// to the lucide-react import above, uncomment this const, and uncomment the two
+// "Android App" <a> buttons in the hero and CTA sections below.
+// const ANDROID_APK_URL = '/downloads/finwise-android.apk';
 
 // ── Design tokens (self-contained light theme so the landing always matches the mockup) ──
 const C = {
@@ -203,7 +206,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin 
             </p>
             <div style={S.heroBtns}>
               <button style={S.btnPrimaryLg} className="lp-btn" onClick={goFree}>Get Started Free <ArrowRight size={17} strokeWidth={2.4} /></button>
-              <a style={S.btnWhite} className="lp-btn" href={ANDROID_APK_URL} download><Download size={17} strokeWidth={2.3} /> Android App</a>
+              {/* APK download hidden until Google Play release:
+              <a style={S.btnWhite} className="lp-btn" href={ANDROID_APK_URL} download><Download size={17} strokeWidth={2.3} /> Android App</a> */}
               <button style={S.btnWhite} className="lp-btn" onClick={() => scrollTo('plans')}>View Plans <ChevronDown size={16} strokeWidth={2.3} /></button>
             </div>
             <div className="lp-hero-trust" style={S.heroTrust}>
@@ -375,7 +379,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin 
         <p style={{ ...S.sectionSub, marginBottom: 22 }}>Join 12,000+ Kenyans already building a better financial future.</p>
         <div style={{ ...S.heroBtns, justifyContent: 'center' }}>
           <button style={S.btnPrimaryLg} className="lp-btn" onClick={goFree}>Get Started Free <ArrowRight size={17} strokeWidth={2.4} /></button>
-          <a style={S.btnWhite} className="lp-btn" href={ANDROID_APK_URL} download><Download size={17} strokeWidth={2.3} /> Android App</a>
+          {/* APK download hidden until Google Play release:
+          <a style={S.btnWhite} className="lp-btn" href={ANDROID_APK_URL} download><Download size={17} strokeWidth={2.3} /> Android App</a> */}
         </div>
       </section>
 

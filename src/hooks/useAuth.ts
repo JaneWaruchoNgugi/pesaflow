@@ -5,6 +5,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithCredential,
   GoogleAuthProvider,
   updateProfile,
@@ -37,6 +39,47 @@ const PROFILE_KEY = 'finwise_auth_profile';
 const loadUserDoc = async (uid: string): Promise<UserProfile | null> => {
   const snap = await getDoc(doc(db, 'users', uid));
   return snap.exists() ? (snap.data() as UserProfile) : null;
+};
+
+// Loads a Google user's profile, creating a fresh one the first time they sign in.
+// Shared by the popup, redirect, and native flows so a brand-new Google user always
+// gets a doc regardless of which flow brought them in.
+const ensureUserProfile = async (user: User): Promise<UserProfile> => {
+  let p = await loadUserDoc(user.uid);
+  if (!p) {
+    p = {
+      uid: user.uid,
+      name: user.displayName || 'PesaFlow User',
+      email: user.email || '',
+      phone: '',
+      authProvider: 'google',
+      tier: 'free',
+      subscriptionStatus: 'active',
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'users', user.uid), p);
+  }
+  return p;
+};
+
+// Mobile browsers and home-screen PWAs block or silently drop the Firebase auth
+// popup ("nothing happens on tap"), so use the redirect flow there. Desktop keeps
+// the popup for a smoother, no-reload experience.
+const usesRedirectFlow = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const standalone =
+    window.matchMedia?.('(display-mode: standalone)').matches === true ||
+    (window.navigator as { standalone?: boolean }).standalone === true;
+  const mobileUA = /Android|iPhone|iPad|iPod|Mobile|Silk|Opera Mini|IEMobile|BlackBerry/i.test(navigator.userAgent);
+  return standalone || mobileUA;
+};
+
+// A desktop popup can still be blocked; these are the codes worth retrying via redirect.
+const isPopupBlocked = (e: unknown): boolean => {
+  const code = (e as { code?: string })?.code ?? '';
+  return code === 'auth/popup-blocked'
+    || code === 'auth/cancelled-popup-request'
+    || code === 'auth/operation-not-supported-in-this-environment';
 };
 
 const sendVerificationEmailFn = httpsCallable(functions, 'sendVerificationEmail');
@@ -72,6 +115,13 @@ export const useAuth = () => {
     setStatus(p?.phone ? 'ready' : 'needs-phone');
   }, []);
 
+  // Completes a Google sign-in for a Firebase user (popup, redirect, or native flow).
+  const completeGoogleSignIn = useCallback(async (user: User) => {
+    const p = await ensureUserProfile(user);
+    setProfile(p);
+    setStatus(p.phone ? 'ready' : 'needs-phone');
+  }, []);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
@@ -80,6 +130,14 @@ export const useAuth = () => {
     });
     return unsub;
   }, [resolveStatus]);
+
+  // Finishes a mobile/PWA redirect sign-in: when the user is sent back from Google,
+  // pick up the result and ensure their profile doc exists (mirrors the popup path).
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => { if (result?.user) return completeGoogleSignIn(result.user); })
+      .catch((e) => setError(mapAuthError(e, 'Google sign-in failed. Please try again.')));
+  }, [completeGoogleSignIn]);
 
   // Cache the profile so the sync layer can resolve the uid synchronously on reload.
   useEffect(() => {
@@ -131,47 +189,42 @@ export const useAuth = () => {
     } finally { setLoading(false); }
   }, [resolveStatus]);
 
-  // Web: Firebase popup. Native: the Capacitor Firebase Auth plugin performs the
-  // native Google flow, then we complete it in the JS SDK via signInWithCredential
-  // so both platforms share one Firebase User.
+  // Native: the Capacitor Firebase Auth plugin runs the native Google flow, then we
+  // complete it in the JS SDK via signInWithCredential so all platforms share one User.
+  // Web desktop: Firebase popup. Web mobile / installed PWA: redirect — the popup is
+  // blocked there, so it would otherwise do nothing on tap. Redirect navigates away
+  // and is finished by the getRedirectResult effect below when the user lands back.
   const signInWithGoogle = useCallback(async (): Promise<boolean> => {
     setError(null);
     setLoading(true);
     try {
-      let user: User;
       if (Capacitor.isNativePlatform()) {
         const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
         const result = await FirebaseAuthentication.signInWithGoogle();
         const idToken = result.credential?.idToken;
         if (!idToken) throw new Error('No Google credential returned.');
         const credential = GoogleAuthProvider.credential(idToken);
-        user = (await signInWithCredential(auth, credential)).user;
-      } else {
-        user = (await signInWithPopup(auth, new GoogleAuthProvider())).user;
+        await completeGoogleSignIn((await signInWithCredential(auth, credential)).user);
+        return true;
       }
-      let p = await loadUserDoc(user.uid);
-      if (!p) {
-        const now = new Date().toISOString();
-        p = {
-          uid: user.uid,
-          name: user.displayName || 'PesaFlow User',
-          email: user.email || '',
-          phone: '',
-          authProvider: 'google',
-          tier: 'free',
-          subscriptionStatus: 'active',
-          createdAt: now,
-        };
-        await setDoc(doc(db, 'users', user.uid), p);
+
+      const provider = new GoogleAuthProvider();
+      if (usesRedirectFlow()) {
+        await signInWithRedirect(auth, provider); // page navigates; resumed on return
+        return true;
       }
-      setProfile(p);
-      setStatus(p.phone ? 'ready' : 'needs-phone');
-      return true;
+      try {
+        await completeGoogleSignIn((await signInWithPopup(auth, provider)).user);
+        return true;
+      } catch (e) {
+        if (isPopupBlocked(e)) { await signInWithRedirect(auth, provider); return true; }
+        throw e;
+      }
     } catch (e) {
       setError(mapAuthError(e, 'Google sign-in failed. Please try again.'));
       return false;
     } finally { setLoading(false); }
-  }, []);
+  }, [completeGoogleSignIn]);
 
   // Used by the post-Google "add phone" step.
   const savePhone = useCallback(async (phone: string): Promise<boolean> => {

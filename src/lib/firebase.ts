@@ -3,19 +3,17 @@ import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-// On the deployed site we serve Firebase's auth handler from our OWN origin via a
-// reverse proxy (see vercel.json: /__/auth/* -> finwise-948c8.firebaseapp.com). Using
-// the app's own hostname as authDomain keeps signInWithRedirect / the auth iframe
-// same-origin, which is required for Google sign-in to survive the redirect on mobile
-// browsers (they block the cross-origin storage the handshake needs). Locally we fall
-// back to the standard Firebase authDomain so popup sign-in keeps working in dev.
-const runtimeHost = typeof window !== 'undefined' ? window.location.hostname : '';
-const isLocalHost = runtimeHost === 'localhost' || runtimeHost === '127.0.0.1' || runtimeHost === '';
-const resolvedAuthDomain = isLocalHost ? import.meta.env.VITE_FIREBASE_AUTH_DOMAIN : runtimeHost;
-
+// authDomain is the standard Firebase value (finwise-948c8.firebaseapp.com). Google
+// sign-in uses signInWithPopup (see useAuth.ts), which completes via postMessage from
+// Firebase's own handler — so the redirect_uri Google validates is the default
+// firebaseapp.com/__/auth/handler that's already registered on the OAuth client, and
+// no cross-origin storage is involved. (An earlier attempt set authDomain to the app's
+// own host to keep signInWithRedirect same-origin on mobile, but that made Google
+// reject the request with redirect_uri_mismatch, since the app-host handler URL isn't
+// registered. Popup makes the custom authDomain unnecessary.)
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain:        resolvedAuthDomain,
+  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'finwise-948c8.firebaseapp.com',
   projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,

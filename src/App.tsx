@@ -35,6 +35,7 @@ import { UpgradePage }      from './components/UpgradePage';
 import { ProfilePage }      from './components/ProfilePage';
 import { AdminPanel }       from './components/admin/AdminPanel';
 import { SupportChatWidget } from './components/SupportChatWidget';
+import { PrivacyPolicy }     from './components/PrivacyPolicy';
 
 import {
   exportExpensesToCSV,
@@ -98,6 +99,7 @@ const MainApp: React.FC = () => {
   const [stage, setStage] = useState<AppStage>('landing');
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [showPolicy, setShowPolicy] = useState(false);
   // Captured once at mount so render stays pure (no Date.now() during render). The
   // subscription notice below only needs day-level accuracy, refreshed on next app load.
   const [nowMs] = useState(() => Date.now());
@@ -480,7 +482,16 @@ const MainApp: React.FC = () => {
         <span>PesaFlow © {new Date().getFullYear()}</span>
         <span className="footer-dot">·</span>
         <span>Smart money management for every Kenyan</span>
+        <span className="footer-dot">·</span>
+        <button
+          onClick={() => setShowPolicy(true)}
+          style={{ background: 'transparent', border: 'none', color: 'inherit', font: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+        >
+          Privacy Policy
+        </button>
       </footer>
+
+      {showPolicy && <PrivacyPolicy onClose={() => setShowPolicy(false)} />}
     </div>
     </ThemeProvider>
   );

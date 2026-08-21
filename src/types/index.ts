@@ -240,6 +240,8 @@ export interface UserProfile {
   subscriptionExpiredAt?: string;
   subscriptionExpiresAt?: string;
   subscriptionStart?: string; // ISO date when paid tier began
+  // Provable, versioned Privacy Policy consent captured at signup (Data Protection Act 2019).
+  consent?: { policyVersion: string; agreedAt: string };
 }
 
 export interface SubscriptionPlan {

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { PrivacyPolicy } from './PrivacyPolicy';
 
 interface AuthGateProps {
   status: 'signed-out' | 'unverified' | 'needs-phone';
@@ -86,6 +87,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({
   const [suConfirm, setSuConfirm] = useState('');
   const [suStep, setSuStep] = useState<'info' | 'pin' | 'confirm'>('info');
   const [suErr, setSuErr] = useState('');
+  const [agreed, setAgreed] = useState(false);   // Privacy Policy consent (signup only)
+  const [showPolicy, setShowPolicy] = useState(false);
 
   // Login
   const [liEmail, setLiEmail] = useState('');
@@ -106,7 +109,14 @@ export const AuthGate: React.FC<AuthGateProps> = ({
       setSuErr('Enter a valid Kenyan phone number, e.g. 0712 345 678 or 0110 123 456.');
       return;
     }
+    if (!agreed) { setSuErr('Please read and agree to the Privacy Policy to continue.'); return; }
     setSuStep('pin');
+  };
+
+  // Google signup also creates an account, so it needs the same consent gate.
+  const handleGoogleSignup = () => {
+    if (!agreed) { setSuErr('Please read and agree to the Privacy Policy to continue.'); return; }
+    onGoogle();
   };
 
   const handleSignupConfirm = (v: string) => {
@@ -253,9 +263,17 @@ export const AuthGate: React.FC<AuthGateProps> = ({
                   onKeyDown={(e) => e.key === 'Enter' && handleSignupInfoContinue()} />
               </div>
             </div>
+            <label style={S.consentRow}>
+              <input type="checkbox" checked={agreed} style={S.checkbox}
+                onChange={(e) => { setAgreed(e.target.checked); setSuErr(''); }} />
+              <span style={S.consentText}>
+                I have read and agree to the{' '}
+                <button type="button" style={S.link} onClick={() => setShowPolicy(true)}>Privacy Policy</button>.
+              </span>
+            </label>
             <button style={{ ...S.btn, opacity: loading ? 0.6 : 1 }} disabled={loading} onClick={handleSignupInfoContinue}>Continue →</button>
             <div style={S.divider}><span style={S.dividerText}>or</span></div>
-            <GoogleButton onClick={onGoogle} disabled={loading} label="Sign up with Google" />
+            <GoogleButton onClick={handleGoogleSignup} disabled={loading} label="Sign up with Google" />
             {suErr && <div style={S.err}>{suErr}</div>}
             {authError && !suErr && <div style={S.err}>{authError}</div>}
             <div style={S.hint}>Already have an account? <button style={S.link} onClick={switchToLogin}>Log in</button></div>
@@ -285,6 +303,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({
         )}
 
       </div>
+
+      {showPolicy && <PrivacyPolicy onClose={() => setShowPolicy(false)} />}
     </div>
   );
 };
@@ -312,6 +332,9 @@ const S: Record<string, React.CSSProperties> = {
   banner:   { fontSize: 13, color: '#065F46', background: 'rgba(16,185,129,0.14)', border: '1px solid rgba(16,185,129,0.35)', padding: '9px 12px', borderRadius: 8, marginTop: 12, textAlign: 'center', fontWeight: 700 },
   loadingBox: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: 'var(--gold)', background: 'rgba(255,127,0,0.1)', border: '1px solid rgba(255,127,0,0.18)', padding: '9px 12px', borderRadius: 8, marginTop: 10, textAlign: 'center', fontWeight: 700 },
   spinner:  { width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,127,0,0.25)', borderTopColor: 'var(--gold)', animation: 'authSpin 0.75s linear infinite' },
+  consentRow: { display: 'flex', alignItems: 'flex-start', gap: 9, margin: '0 0 16px', cursor: 'pointer' },
+  checkbox: { width: 17, height: 17, marginTop: 1, flexShrink: 0, accentColor: 'var(--gold)', cursor: 'pointer' },
+  consentText: { fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 },
   hint:     { fontSize: 12, color: 'var(--text-3)', textAlign: 'center', marginTop: 16, lineHeight: 1.6 },
   link:     { background: 'transparent', border: 'none', color: 'var(--gold)', fontSize: 12, fontFamily: 'Karla, sans-serif', cursor: 'pointer', textDecoration: 'underline', padding: 0 },
   backLink: { background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: 13, fontFamily: 'Karla, sans-serif', cursor: 'pointer', display: 'block', margin: '8px auto 0', padding: '6px 12px' },

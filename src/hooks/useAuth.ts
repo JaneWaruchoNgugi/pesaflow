@@ -20,6 +20,7 @@ import { httpsCallable } from 'firebase/functions';
 import { Capacitor } from '@capacitor/core';
 import { db, auth, functions } from '../lib/firebase';
 import { isValidEmail, isValidPin, isValidKenyanPhone, normalizePhone } from '../lib/authValidation';
+import { currentConsent } from '../lib/legal';
 import { mapAuthError } from '../lib/authErrors';
 import type { UserProfile } from '../types';
 
@@ -56,6 +57,9 @@ const ensureUserProfile = async (user: User): Promise<UserProfile> => {
       tier: 'free',
       subscriptionStatus: 'active',
       createdAt: new Date().toISOString(),
+      // The signup screen requires agreeing to the Privacy Policy before the Google
+      // button works, so a first-time Google profile is created with consent given.
+      consent: currentConsent(),
     };
     await setDoc(doc(db, 'users', user.uid), p);
   }
@@ -153,6 +157,7 @@ export const useAuth = () => {
         tier: 'free',
         subscriptionStatus: 'active',
         createdAt: now,
+        consent: currentConsent(),   // consent gate enforced on the signup screen
       };
       await setDoc(doc(db, 'users', cred.user.uid), p);
       // No email verification for now (no authenticated sending domain) — let them in.

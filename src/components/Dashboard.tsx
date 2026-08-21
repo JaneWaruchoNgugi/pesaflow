@@ -157,19 +157,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div style={S.freeHookKicker}>Your spending pattern is ready</div>
             <div style={S.freeHookTitle}>PesaFlow found enough data to turn tracking into a plan.</div>
             <div style={S.freeHookText}>
-              Unlock Silver to plan bills and goals, or Gold to see full AI insights, investment tracking, and emergency alerts.
+              Everything you&apos;re using is free. Investment tracking, deeper AI insights, an AI money advisor, and emergency alerts are coming soon with Gold.
               {projectedSavings > 0 && ` You may be able to redirect about ${formatCurrency(projectedSavings, profile.currency)} from lifestyle spending this month.`}
             </div>
             <div style={S.freeHookActions}>
-              <button style={S.silverBtn} onClick={() => onUpgrade?.('silver')}><Target size={15} /> Unlock Silver</button>
-              <button style={S.goldBtn} onClick={() => onUpgrade?.('gold')}><Crown size={15} /> Unlock Gold</button>
+              <button style={S.goldBtn} onClick={() => onUpgrade?.('gold')}><Crown size={15} /> See Gold features — coming soon</button>
             </div>
           </div>
           <div style={S.lockedPreviewRail}>
             {[
-              { icon: Target, label: 'More goals' },
               { icon: TrendingUp, label: 'Investments' },
               { icon: Lock, label: 'AI insights' },
+              { icon: Shield, label: 'Alerts' },
             ].map(item => {
               const Icon = item.icon;
               return <div key={item.label} style={S.lockedPreview}><Icon size={15} /> {item.label}</div>;
@@ -371,7 +370,6 @@ const S: Record<string, React.CSSProperties> = {
   freeHookTitle: { fontFamily: 'Cormorant Garamond, serif', fontSize: 23, fontWeight: 700, color: '#fff', marginBottom: 5 },
   freeHookText: { fontSize: 13, color: 'rgba(255,255,255,0.72)', lineHeight: 1.55, maxWidth: 680 },
   freeHookActions: { display: 'flex', gap: 9, flexWrap: 'wrap', marginTop: 14 },
-  silverBtn: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.2)', background: '#fff', color: '#0A1628', fontSize: 13, fontWeight: 800, cursor: 'pointer' },
   goldBtn: { display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', fontSize: 13, fontWeight: 900, cursor: 'pointer' },
   lockedPreviewRail: { display: 'flex', flexDirection: 'column', gap: 8, minWidth: 150, justifyContent: 'center' },
   lockedPreview: { display: 'inline-flex', alignItems: 'center', gap: 7, color: 'rgba(255,255,255,0.78)', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '7px 10px', fontSize: 12, fontWeight: 700 },

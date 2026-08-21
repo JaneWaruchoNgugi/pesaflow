@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { seedDemoIfNeeded } from './lib/demoData'
+
+// Guests see a populated app on first paint: seed demo data (once) before render,
+// so the data hooks initialise from it. No-ops for signed-in/returning users.
+try { seedDemoIfNeeded(); } catch { /* non-fatal: empty app still works */ }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

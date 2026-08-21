@@ -112,11 +112,12 @@ const FOOTER_COLS: { heading: string; links: { label: string; target: string }[]
 interface LandingPageProps {
   onSelectTier: (tier: SubscriptionTier) => void;
   onLogin: () => void;
+  onExplore?: () => void;
 }
 
 const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin, onExplore }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [testi, setTesti] = useState(0);
   const [email, setEmail] = useState('');
@@ -171,6 +172,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSelectTier, onLogin 
           </div>
 
           <div className="lp-nav-actions" style={S.navActions}>
+            {onExplore && (
+              <button
+                onClick={onExplore}
+                style={{ padding: '10px 18px', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}
+              >
+                ← Back to the app
+              </button>
+            )}
             <button style={S.btnGhost} className="lp-btn" onClick={onLogin}>Log in</button>
             <button style={S.btnPrimary} className="lp-btn" onClick={goFree}>Get Started Free</button>
           </div>

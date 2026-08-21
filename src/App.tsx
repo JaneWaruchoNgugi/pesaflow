@@ -36,6 +36,8 @@ import { ProfilePage }      from './components/ProfilePage';
 import { AdminPanel }       from './components/admin/AdminPanel';
 import { SupportChatWidget } from './components/SupportChatWidget';
 import { PrivacyPolicy }     from './components/PrivacyPolicy';
+import { GuestBanner }       from './components/GuestBanner';
+import { clearDemoData }     from './lib/demoData';
 
 import {
   exportExpensesToCSV,
@@ -57,7 +59,7 @@ const TIER_META: Record<SubscriptionTier, { name: string; price: number; color: 
   platinum: { name: 'Platinum', price: currentTierPrice('platinum'), color: '#A78BFA' },
 };
 
-type AppStage = 'landing' | 'payment' | 'auth' | 'app';
+type AppStage = 'landing' | 'about' | 'payment' | 'auth' | 'app';
 
 // Static "coming soon" copy for the premium upgrade wall. Module-scoped (never changes).
 const wallCopy: Partial<Record<AppView, { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; tier: SubscriptionTier; title: string; body: string; bullets: string[] }>> = {
@@ -124,6 +126,15 @@ const MainApp: React.FC = () => {
   const emergencyFund = useEmergencyFund(breakdown.totalExpenses || profile.monthlyIncome * 0.6);
   const alerts = useAlerts();
 
+  const isGuest = auth.status === 'signed-out';
+  const hasRealData =
+    monthlyExpenses.some(e => !e.isDemo) ||
+    goals.goals.some(g => !g.isDemo) ||
+    bills.bills.some(b => !b.isDemo);
+
+  const goToAuth = (mode: 'login' | 'signup') => { setAuthMode(mode); setStage('auth'); };
+  const handleClearDemo = () => { clearDemoData(); window.location.reload(); };
+
   const handleUpdateIncome = (
     income: number,
     streams?: import('./types').IncomeStream[],
@@ -155,18 +166,14 @@ const MainApp: React.FC = () => {
   // NOT be sent here — on mobile, signInWithRedirect reloads the page and resets
   // `stage` back to 'landing', which previously bounced them to the landing page
   // instead of the add-phone step / dashboard.
-  if (auth.status === 'signed-out' && stage === 'landing') {
+  // About page (the former landing page) — reachable from the guest banner.
+  if (stage === 'about') {
     return (
       <ThemeProvider>
         <LandingPage
-          onSelectTier={(tier) => {
-            // Gold is "coming soon" and not purchasable yet — everything else is free.
-            if (tier !== 'free') return;
-            setSelectedTier('free');
-            setAuthMode('signup');
-            setStage('auth');
-          }}
-          onLogin={() => { setAuthMode('login'); setStage('auth'); }}
+          onSelectTier={(tier) => { if (tier !== 'free') return; setSelectedTier('free'); goToAuth('signup'); }}
+          onLogin={() => goToAuth('login')}
+          onExplore={() => setStage('app')}
         />
       </ThemeProvider>
     );
@@ -174,7 +181,7 @@ const MainApp: React.FC = () => {
 
   // ── Stage: Auth / Verify / Add-phone ────────────────────
   // 'loading' already returned above, so status here is signed-out | unverified | needs-phone.
-  if (auth.status !== 'ready') {
+  if (auth.status !== 'ready' && stage === 'auth') {
     return (
       <ThemeProvider>
         <AuthGate
@@ -188,7 +195,7 @@ const MainApp: React.FC = () => {
           onSendPinReset={auth.sendPinReset}
           loading={auth.loading}
           error={auth.error}
-          defaultMode={stage === 'payment' ? 'signup' : authMode}
+          defaultMode={authMode}
         />
       </ThemeProvider>
     );
@@ -223,6 +230,16 @@ const MainApp: React.FC = () => {
   return (
     <ThemeProvider>
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+
+      {isGuest && (
+        <GuestBanner
+          hasRealData={hasRealData}
+          onSignUp={() => goToAuth('signup')}
+          onLogin={() => goToAuth('login')}
+          onAbout={() => setStage('about')}
+          onClearDemo={handleClearDemo}
+        />
+      )}
 
       {/* Payment overlay when upgrading from within the app */}
       {stage === 'payment' && auth.status === 'ready' && (

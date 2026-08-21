@@ -22,6 +22,8 @@ import { db, auth, functions } from '../lib/firebase';
 import { isValidEmail, isValidPin, isValidKenyanPhone, normalizePhone } from '../lib/authValidation';
 import { currentConsent } from '../lib/legal';
 import { mapAuthError } from '../lib/authErrors';
+import { migrateGuestDataToAccount } from '../lib/guestMigration';
+import { DEMO_FLAG } from '../lib/demoData';
 import type { UserProfile } from '../types';
 
 // 'loading'   — resolving the persisted Firebase session
@@ -96,6 +98,15 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // When a browser that started as a guest signs in/up, push the guest's real
+  // (non-demo) data to the new account, then reload for one clean signed-in state.
+  const migrateIfGuest = useCallback(async (p: UserProfile) => {
+    if (!localStorage.getItem(DEMO_FLAG)) return; // browser didn't start as a guest
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); // ensure sync.ts sees the uid
+    await migrateGuestDataToAccount();
+    window.location.reload();
+  }, []);
+
   // Phone is captured once, on the email signup form. Login, Google sign-in, and
   // session-restore all send the user straight to the app — we never re-prompt.
   const resolveStatus = useCallback(async (user: User | null) => {
@@ -115,7 +126,8 @@ export const useAuth = () => {
     const p = await ensureUserProfile(user);
     setProfile(p);
     setStatus('ready');
-  }, []);
+    await migrateIfGuest(p);
+  }, [migrateIfGuest]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -165,10 +177,11 @@ export const useAuth = () => {
       // No email verification for now (no authenticated sending domain) — let them in.
       setProfile(p);
       setStatus('ready');
+      await migrateIfGuest(p);
     } catch (e) {
       setError(mapAuthError(e, 'Could not create account. Check your connection.'));
     } finally { setLoading(false); }
-  }, []);
+  }, [migrateIfGuest]);
 
   const signInWithEmail = useCallback(async (email: string, pin: string): Promise<boolean> => {
     setError(null);
@@ -178,12 +191,14 @@ export const useAuth = () => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), pin);
       await resolveStatus(cred.user);
+      const p = await loadUserDoc(cred.user.uid);
+      if (p) await migrateIfGuest(p);
       return true;
     } catch (e) {
       setError(mapAuthError(e, 'Wrong email or PIN.'));
       return false;
     } finally { setLoading(false); }
-  }, [resolveStatus]);
+  }, [resolveStatus, migrateIfGuest]);
 
   // Native: the Capacitor Firebase Auth plugin runs the native Google flow, then we
   // complete it in the JS SDK via signInWithCredential so all platforms share one User.

@@ -20,6 +20,8 @@ export interface Expense {
   isRecurring: boolean;
   /** Defaults to 'oneoff' when absent (backward compatible with older entries). */
   frequency?: ExpenseFrequency;
+  /** Seeded sample data shown to guests; stripped before a real account is created. */
+  isDemo?: boolean;
 }
 
 export interface IncomeStream {
@@ -40,6 +42,8 @@ export interface FinancialProfile {
   dailyAmount?: number;
   /** Days worked per week for daily earners (1–7); monthly ≈ dailyAmount × daysPerWeek × 4.33. */
   daysPerWeek?: number;
+  /** Seeded sample data shown to guests; stripped before a real account is created. */
+  isDemo?: boolean;
 }
 
 export interface CategoryMeta {
@@ -153,6 +157,8 @@ export interface Goal {
   chamaFrequency?: ChamaFrequency;
   /** Chama: amount each member contributes per period. Pot = chamaContribution × chamaMembers. */
   chamaContribution?: number;
+  /** Seeded sample data shown to guests; stripped before a real account is created. */
+  isDemo?: boolean;
 }
 
 export interface GoalCategoryMeta {
@@ -182,6 +188,8 @@ export interface Bill {
   lastPaidDate?: string;
   notes: string;
   isRecurring: boolean;
+  /** Seeded sample data shown to guests; stripped before a real account is created. */
+  isDemo?: boolean;
 }
 
 export interface BillCategoryMeta {

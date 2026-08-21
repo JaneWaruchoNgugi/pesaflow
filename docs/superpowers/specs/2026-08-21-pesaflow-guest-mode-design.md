@@ -132,6 +132,14 @@ When a guest completes **signup or first login**:
    `syncDoc('financialProfile', ...)`. Both helpers already exist and derive the
    new `uid` from the freshly-written `finwise_auth_profile` cache.
 5. Clear `pesaflow_demo_seeded`.
+6. **Reload once** (`window.location.reload()`) to finalise. Rationale: each data
+   hook's cloud-fetch effect runs only **once on mount** (empty dep array, reads
+   `uid` at that time) and only overwrites local when the cloud is **non-empty** —
+   so (a) nothing wipes local on signup, but (b) the hooks still hold the demo data
+   in memory. A single reload re-initialises every hook from the cleaned
+   localStorage (demo stripped, real data present, cloud now populated), giving one
+   consistent signed-in state. This is the natural sign-in transition, so a reload
+   reads as normal.
 
 Hook point: in `useAuth`, after a successful `signUpWithEmail` / Google
 `completeGoogleSignIn` / email `signInWithEmail` that transitions a

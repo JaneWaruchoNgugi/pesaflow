@@ -85,13 +85,15 @@ On first guest visit, seed realistic sample data so the dashboard is alive:
   - `finwise_goals` — one goal, e.g. "Plot deposit", tagged `isDemo: true`
   - `finwise_bills` — one recurring bill (rent), tagged `isDemo: true`
 - Set `localStorage['pesaflow_demo_seeded'] = '1'` so we never re-seed.
-- **Mechanism (explicit):** seeding runs in a top-level effect in `MainApp` **only
-  once `auth.status === 'signed-out'`** (so we never seed for a returning signed-in
-  user, whose status is `'loading'` until the session restores) AND
-  `pesaflow_demo_seeded` is unset. It writes the `finwise_*` keys, sets the flag,
-  then triggers **one** `window.location.reload()`. On reload the flag is set, so we
-  don't re-seed, and the hooks initialise from the now-populated localStorage. The
-  reload happens at most once, ever, on a first-time guest visit.
+- **Mechanism (explicit, reload-free):** `seedDemoIfNeeded()` runs **synchronously in
+  `main.tsx` before `createRoot().render()`**, so the data hooks (which initialise
+  from localStorage in their `useState` initialisers) read the seeded data on the
+  very first render — no reload, no flash. Seed only when ALL of:
+  - `localStorage['finwise_auth_profile']` is **absent** — i.e. not a signed-in user.
+    (A returning signed-in user always has this cached; a logged-out user does too
+    only until logout clears it — and their data keys are non-empty, caught below.)
+  - `localStorage['pesaflow_demo_seeded']` is unset, and
+  - the `finwise_*` data keys are empty (never overwrite existing data).
 
 **`isDemo` tag:** add an optional `isDemo?: boolean` to the relevant item types
 (`Expense`, `Goal`, `Bill`). It is (a) how "Clear sample data" finds demo items
@@ -154,8 +156,9 @@ as a known limitation).
 - `src/components/GuestBanner.tsx` — banner + smart-prompt modal.
 
 **Modified**
+- `src/main.tsx` — call `seedDemoIfNeeded()` synchronously before `render()`.
 - `src/App.tsx` — `AppStage` adds `'about'`; routing precedence (guest app default);
-  render `<GuestBanner>` in guest mode; seed demo on mount; wire About link.
+  render `<GuestBanner>` in guest mode; wire About link.
 - `src/hooks/useAuth.ts` — call `migrateGuestDataToAccount()` on guest→account transition.
 - `src/types/index.ts` — add optional `isDemo?: boolean` to `Expense`, `Goal`, `Bill`.
 - `src/components/LandingPage.tsx` — add a "back to app / explore" affordance (as About page).
@@ -164,8 +167,9 @@ as a known limitation).
 
 ## Data flow
 
-**First visit (guest):** mount → `seedDemoIfNeeded()` writes demo to `finwise_*` →
-hooks render populated dashboard → GuestBanner shows. No network.
+**First visit (guest):** `main.tsx` → `seedDemoIfNeeded()` writes demo to `finwise_*`
+before render → hooks initialise from it → populated dashboard + GuestBanner on first
+paint. No reload, no network.
 
 **Guest edits:** hooks write localStorage (no uid → no cloud). If the edit is a
 new real item, the smart-prompt becomes eligible.

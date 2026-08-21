@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import {
   onAuthStateChanged,
@@ -44,11 +44,11 @@ const loadUserDoc = async (uid: string): Promise<UserProfile | null> => {
 
 // Loads a Google user's profile, creating a fresh one the first time they sign in.
 // Shared by the popup, redirect, and native flows so a brand-new Google user always
-// gets a doc regardless of which flow brought them in. `isNew` distinguishes a first-
-// time signup (ask for the phone) from a returning login (never ask again).
-const ensureUserProfile = async (user: User): Promise<{ profile: UserProfile; isNew: boolean }> => {
+// gets a doc regardless of which flow brought them in. Google users are never asked
+// for a phone number, so the profile is created with an empty phone.
+const ensureUserProfile = async (user: User): Promise<UserProfile> => {
   const existing = await loadUserDoc(user.uid);
-  if (existing) return { profile: existing, isNew: false };
+  if (existing) return existing;
   const p: UserProfile = {
     uid: user.uid,
     name: user.displayName || 'PesaFlow User',
@@ -63,7 +63,7 @@ const ensureUserProfile = async (user: User): Promise<{ profile: UserProfile; is
     consent: currentConsent(),
   };
   await setDoc(doc(db, 'users', user.uid), p);
-  return { profile: p, isNew: true };
+  return p;
 };
 
 // A popup can be blocked (installed PWA, in-app webview, aggressive blocker); these
@@ -95,34 +95,26 @@ export const useAuth = () => {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // True only while a brand-new signup still owes its phone number. The phone step is
-  // a SIGNUP step — login and session-restore must never re-trigger it. This ref lets
-  // the onAuthStateChanged handler (which fires during signup too) avoid clobbering the
-  // needs-phone state a fresh signup just set, without re-asking returning users.
-  const awaitingSignupPhone = useRef(false);
 
-  // Derives the gate state on login / session-restore. Phone is collected at signup,
-  // so a returning user is sent straight to the app even if their profile has no phone.
+  // Phone is captured once, on the email signup form. Login, Google sign-in, and
+  // session-restore all send the user straight to the app — we never re-prompt.
   const resolveStatus = useCallback(async (user: User | null) => {
-    if (!user) { awaitingSignupPhone.current = false; setProfile(null); setStatus('signed-out'); return; }
+    if (!user) { setProfile(null); setStatus('signed-out'); return; }
     // Email verification is currently NOT required (no authenticated sending domain
     // yet). Re-enable by gating unverified email/PIN users here once a domain is set up:
     //   const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
     //   if (!isGoogle && !user.emailVerified) { setStatus('unverified'); return; }
     const p = await loadUserDoc(user.uid);
     setProfile(p);
-    // Only keep the phone step if a signup is mid-flow and still owes a number.
-    setStatus(awaitingSignupPhone.current && !p?.phone ? 'needs-phone' : 'ready');
+    setStatus('ready');
   }, []);
 
-  // Completes a Google sign-in (popup, redirect, or native flow). Ask for the phone
-  // ONLY on a first-time signup; a returning Google login skips straight to the app.
+  // Completes a Google sign-in (popup, redirect, or native flow). Google users go
+  // straight to the app — they are never asked for a phone number.
   const completeGoogleSignIn = useCallback(async (user: User) => {
-    const { profile: p, isNew } = await ensureUserProfile(user);
-    const needsPhone = isNew && !p.phone;
-    awaitingSignupPhone.current = needsPhone;
+    const p = await ensureUserProfile(user);
     setProfile(p);
-    setStatus(needsPhone ? 'needs-phone' : 'ready');
+    setStatus('ready');
   }, []);
 
   useEffect(() => {
@@ -240,7 +232,6 @@ export const useAuth = () => {
       const normalized = normalizePhone(phone);
       await setDoc(doc(db, 'users', user.uid), { phone: normalized }, { merge: true });
       setProfile((prev) => (prev ? { ...prev, phone: normalized } : prev));
-      awaitingSignupPhone.current = false;   // signup phone step done
       setStatus('ready');
       return true;
     } catch {
@@ -285,7 +276,6 @@ export const useAuth = () => {
   const logout = useCallback(async () => {
     await signOut(auth);
     localStorage.removeItem(PROFILE_KEY);
-    awaitingSignupPhone.current = false;
     setProfile(null);
     setStatus('signed-out');
   }, []);
@@ -296,7 +286,6 @@ export const useAuth = () => {
     [ PROFILE_KEY, 'finwise_expenses', 'finwise_investments', 'finwise_goals', 'finwise_bills', 'finwise_networth' ]
       .forEach((k) => localStorage.removeItem(k));
     try { if (user) await deleteUser(user); } catch { await signOut(auth).catch(() => {}); }
-    awaitingSignupPhone.current = false;
     setProfile(null);
     setStatus('signed-out');
   }, []);

@@ -58,16 +58,49 @@ const TIER_META: Record<SubscriptionTier, { name: string; price: number; color: 
 
 type AppStage = 'landing' | 'payment' | 'auth' | 'app';
 
-const App: React.FC = () => {
-  // ── Hidden admin route: /admin or /?__admin ───────────────────────
-  if (window.location.search.includes('__admin') || window.location.pathname === '/admin') {
-    return <ThemeProvider><AdminPanel /></ThemeProvider>;
-  }
+// Static "coming soon" copy for the premium upgrade wall. Module-scoped (never changes).
+const wallCopy: Partial<Record<AppView, { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; tier: SubscriptionTier; title: string; body: string; bullets: string[] }>> = {
+  bills: { icon: ReceiptText, tier: 'silver', title: 'Turn expenses into a monthly bill plan', body: 'Silver unlocks recurring bills, due dates, and payment status so users stop guessing what is coming next.', bullets: ['Recurring bills', 'Due date tracking', 'Paid and overdue status'] },
+  networth: { icon: Landmark, tier: 'silver', title: 'Show the full financial position', body: 'Silver adds net worth so assets and debts sit beside daily spending.', bullets: ['Assets and liabilities', 'Net worth summary', 'Progress over time'] },
+  emergency: { icon: Shield, tier: 'silver', title: 'Build an emergency fund with structure', body: 'Silver gives users a target, current balance, and months-covered view.', bullets: ['Emergency target', 'Deposit tracking', 'Months covered'] },
+  investments: { icon: TrendingUp, tier: 'gold', title: 'Investment tracking is coming soon', body: 'Our upcoming Gold plan will track SACCOs, MMFs, stocks, bonds, crypto, and long-term projections in one portfolio view.', bullets: ['Portfolio tracker', 'Allocation view', 'Growth projections'] },
+  insights: { icon: BarChart3, tier: 'gold', title: 'Deeper spending insights are coming soon', body: 'Gold will turn your logged expenses into deeper comparisons, lifestyle warnings, and savings opportunities.', bullets: ['Ideal vs actual allocation', 'Lifestyle overspend warnings', 'Savings opportunity estimates'] },
+  chat: { icon: Bot, tier: 'gold', title: 'The AI money advisor is coming soon', body: 'Gold will bring an AI advisor with context from your spending, goals, bills, investments, and net worth.', bullets: ['Personal AI guidance', 'Context-aware answers', 'Action plans'] },
+  alerts: { icon: Bell, tier: 'gold', title: 'Alerts & SOS support are coming soon', body: 'Gold will add emergency alerts and AI-supported action planning when the numbers need attention.', bullets: ['SOS contacts', 'Emergency summaries', 'AI action plans'] },
+};
 
+// Module-scoped (not defined inside the component) so its identity is stable across
+// renders — a component defined during render remounts its subtree every time.
+const UpgradeWall: React.FC<{ view: AppView; userTier: SubscriptionTier }> = ({ view, userTier }) => {
+  const copy = wallCopy[view] ?? { icon: Lock, tier: 'silver' as SubscriptionTier, title: `${view.charAt(0).toUpperCase() + view.slice(1)} is a premium feature`, body: 'Upgrade your plan to unlock this and more tools.', bullets: ['More planning tools', 'Better money visibility', 'Premium support'] };
+  const Icon = copy.icon;
+  return (
+    <div style={upgradeWallStyle} className="animate-in">
+      <div style={wallIconStyle}><Icon size={28} strokeWidth={2.1} /></div>
+      <div style={wallBadgeStyle}><Sparkles size={13} /> Coming soon</div>
+      <div style={wallTitleStyle}>{copy.title}</div>
+      <div style={wallBodyStyle}>{copy.body}</div>
+      <div style={wallBulletGridStyle}>
+        {copy.bullets.map((bullet) => <div key={bullet} style={wallBulletStyle}><Lock size={13} /> {bullet}</div>)}
+      </div>
+      <div style={wallActionRowStyle}>
+        <button style={{ ...wallGoldBtnStyle, opacity: 0.7, cursor: 'default' }} disabled>
+          <Crown size={16} /> Premium — Coming soon
+        </button>
+      </div>
+      <div style={wallCurrentStyle}>Everything else is <strong style={{ color: TIER_META[userTier].color }}>free</strong> — enjoy the app while we finish this.</div>
+    </div>
+  );
+};
+
+const MainApp: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>('advisor');
   const [stage, setStage] = useState<AppStage>('landing');
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  // Captured once at mount so render stays pure (no Date.now() during render). The
+  // subscription notice below only needs day-level accuracy, refreshed on next app load.
+  const [nowMs] = useState(() => Date.now());
 
   const auth = useAuth();
 
@@ -171,9 +204,9 @@ const App: React.FC = () => {
       const expiry = profile.subscriptionExpiresAt ? Date.parse(profile.subscriptionExpiresAt) : 0;
       const start = profile.subscriptionStart ? Date.parse(profile.subscriptionStart) : 0;
       const daysLeft = expiry
-        ? Math.ceil((expiry - Date.now()) / (24 * 60 * 60 * 1000))
+        ? Math.ceil((expiry - nowMs) / (24 * 60 * 60 * 1000))
         : start
-          ? 30 - Math.floor((Date.now() - start) / (24 * 60 * 60 * 1000))
+          ? 30 - Math.floor((nowMs - start) / (24 * 60 * 60 * 1000))
           : null;
       if (daysLeft !== null) {
         if (daysLeft <= 0) return 'Your subscription has ended. Renew to continue premium access.';
@@ -184,38 +217,6 @@ const App: React.FC = () => {
   })();
   const lockedViews = PLAN_LOCKED_VIEWS[userTier] ?? [];
   const isLocked = (view: AppView) => userTier === 'free' && view === 'goals' ? false : lockedViews.includes(view);
-
-  const wallCopy: Partial<Record<AppView, { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; tier: SubscriptionTier; title: string; body: string; bullets: string[] }>> = {
-    bills: { icon: ReceiptText, tier: 'silver', title: 'Turn expenses into a monthly bill plan', body: 'Silver unlocks recurring bills, due dates, and payment status so users stop guessing what is coming next.', bullets: ['Recurring bills', 'Due date tracking', 'Paid and overdue status'] },
-    networth: { icon: Landmark, tier: 'silver', title: 'Show the full financial position', body: 'Silver adds net worth so assets and debts sit beside daily spending.', bullets: ['Assets and liabilities', 'Net worth summary', 'Progress over time'] },
-    emergency: { icon: Shield, tier: 'silver', title: 'Build an emergency fund with structure', body: 'Silver gives users a target, current balance, and months-covered view.', bullets: ['Emergency target', 'Deposit tracking', 'Months covered'] },
-    investments: { icon: TrendingUp, tier: 'gold', title: 'Investment tracking is coming soon', body: 'Our upcoming Gold plan will track SACCOs, MMFs, stocks, bonds, crypto, and long-term projections in one portfolio view.', bullets: ['Portfolio tracker', 'Allocation view', 'Growth projections'] },
-    insights: { icon: BarChart3, tier: 'gold', title: 'Deeper spending insights are coming soon', body: 'Gold will turn your logged expenses into deeper comparisons, lifestyle warnings, and savings opportunities.', bullets: ['Ideal vs actual allocation', 'Lifestyle overspend warnings', 'Savings opportunity estimates'] },
-    chat: { icon: Bot, tier: 'gold', title: 'The AI money advisor is coming soon', body: 'Gold will bring an AI advisor with context from your spending, goals, bills, investments, and net worth.', bullets: ['Personal AI guidance', 'Context-aware answers', 'Action plans'] },
-    alerts: { icon: Bell, tier: 'gold', title: 'Alerts & SOS support are coming soon', body: 'Gold will add emergency alerts and AI-supported action planning when the numbers need attention.', bullets: ['SOS contacts', 'Emergency summaries', 'AI action plans'] },
-  };
-
-  const UpgradeWall: React.FC<{ view: AppView }> = ({ view }) => {
-    const copy = wallCopy[view] ?? { icon: Lock, tier: 'silver' as SubscriptionTier, title: `${view.charAt(0).toUpperCase() + view.slice(1)} is a premium feature`, body: 'Upgrade your plan to unlock this and more tools.', bullets: ['More planning tools', 'Better money visibility', 'Premium support'] };
-    const Icon = copy.icon;
-    return (
-      <div style={upgradeWallStyle} className="animate-in">
-        <div style={wallIconStyle}><Icon size={28} strokeWidth={2.1} /></div>
-        <div style={wallBadgeStyle}><Sparkles size={13} /> Coming soon</div>
-        <div style={wallTitleStyle}>{copy.title}</div>
-        <div style={wallBodyStyle}>{copy.body}</div>
-        <div style={wallBulletGridStyle}>
-          {copy.bullets.map((bullet) => <div key={bullet} style={wallBulletStyle}><Lock size={13} /> {bullet}</div>)}
-        </div>
-        <div style={wallActionRowStyle}>
-          <button style={{ ...wallGoldBtnStyle, opacity: 0.7, cursor: 'default' }} disabled>
-            <Crown size={16} /> Premium — Coming soon
-          </button>
-        </div>
-        <div style={wallCurrentStyle}>Everything else is <strong style={{ color: TIER_META[userTier].color }}>free</strong> — enjoy the app while we finish this.</div>
-      </div>
-    );
-  };
 
   return (
     <ThemeProvider>
@@ -314,7 +315,7 @@ const App: React.FC = () => {
           )}
 
           {/* ── Investments ─────────────────────────────────────── */}
-          {activeView === 'investments' && (isLocked('investments') ? <UpgradeWall view="investments" /> :
+          {activeView === 'investments' && (isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} /> :
             <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button style={exportBtnStyle} onClick={() => exportInvestmentsToCSV(investments)}>
@@ -334,7 +335,7 @@ const App: React.FC = () => {
           )}
 
           {/* ── Goals ───────────────────────────────────────────── */}
-          {activeView === 'goals' && (isLocked('goals') ? <UpgradeWall view="goals" /> :
+          {activeView === 'goals' && (isLocked('goals') ? <UpgradeWall view="goals" userTier={userTier} /> :
             <Goals
               goals={goals.goals}
               activeGoals={goals.activeGoals}
@@ -352,7 +353,7 @@ const App: React.FC = () => {
           )}
 
           {/* ── Bills ───────────────────────────────────────────── */}
-          {activeView === 'bills' && (isLocked('bills') ? <UpgradeWall view="bills" /> :
+          {activeView === 'bills' && (isLocked('bills') ? <UpgradeWall view="bills" userTier={userTier} /> :
             <Bills
               bills={bills.bills}
               sortedBills={bills.sortedBills}
@@ -369,7 +370,7 @@ const App: React.FC = () => {
           )}
 
           {/* ── Net Worth ───────────────────────────────────────── */}
-          {activeView === 'networth' && (isLocked('networth') ? <UpgradeWall view="networth" /> :
+          {activeView === 'networth' && (isLocked('networth') ? <UpgradeWall view="networth" userTier={userTier} /> :
             <div className="animate-in">
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                 <button style={exportBtnStyle} onClick={() => exportNetWorthToCSV(netWorth.items)}>
@@ -388,7 +389,7 @@ const App: React.FC = () => {
           )}
 
           {/* ── Emergency Fund ──────────────────────────────────── */}
-          {activeView === 'emergency' && (isLocked('emergency') ? <UpgradeWall view="emergency" /> :
+          {activeView === 'emergency' && (isLocked('emergency') ? <UpgradeWall view="emergency" userTier={userTier} /> :
             <EmergencyFund
               data={emergencyFund.data}
               targetAmount={emergencyFund.targetAmount}
@@ -405,12 +406,12 @@ const App: React.FC = () => {
           )}
 
           {/* ── Insights ────────────────────────────────────────── */}
-          {activeView === 'insights' && (isLocked('insights') ? <UpgradeWall view="insights" /> :
+          {activeView === 'insights' && (isLocked('insights') ? <UpgradeWall view="insights" userTier={userTier} /> :
             <Insights breakdown={breakdown} profile={profile} />
           )}
 
           {/* ── AI Chat ─────────────────────────────────────────── */}
-          {activeView === 'chat' && (isLocked('chat') ? <UpgradeWall view="chat" /> :
+          {activeView === 'chat' && (isLocked('chat') ? <UpgradeWall view="chat" userTier={userTier} /> :
             <AIChat
               userId={auth.profile?.uid ?? ''}
               profile={profile}
@@ -429,7 +430,7 @@ const App: React.FC = () => {
           )}
 
           {/* ── Alerts & SOS ────────────────────────────────────── */}
-          {activeView === 'alerts' && (isLocked('alerts') ? <UpgradeWall view="alerts" /> :
+          {activeView === 'alerts' && (isLocked('alerts') ? <UpgradeWall view="alerts" userTier={userTier} /> :
             <AlertsPanel
               userId={auth.profile?.uid ?? ''}
               userTier={userTier}
@@ -483,6 +484,18 @@ const App: React.FC = () => {
     </div>
     </ThemeProvider>
   );
+};
+
+// Thin router with NO hooks of its own. The hidden admin panel renders here without
+// mounting MainApp's data hooks (useExpenses, useAuth, …). Because this wrapper has no
+// hooks, MainApp is free to call all of its hooks unconditionally at the top — the
+// admin check used to sit before those hooks, making every one of them conditional and
+// violating the rules of hooks.
+const App: React.FC = () => {
+  if (window.location.search.includes('__admin') || window.location.pathname === '/admin') {
+    return <ThemeProvider><AdminPanel /></ThemeProvider>;
+  }
+  return <MainApp />;
 };
 
 const exportBtnStyle: React.CSSProperties = {

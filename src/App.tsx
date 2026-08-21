@@ -142,6 +142,7 @@ const MainApp: React.FC = () => {
   ) => updateProfile(income, profile.currency, streams, meta);
 
   const openPaidPlan = (tier: SubscriptionTier) => {
+    if (isGuest) { goToAuth('signup'); return; } // guests must sign up before paying
     setSelectedTier(tier);
     setStage('payment');
   };

@@ -62,19 +62,8 @@ const ensureUserProfile = async (user: User): Promise<UserProfile> => {
   return p;
 };
 
-// Mobile browsers and home-screen PWAs block or silently drop the Firebase auth
-// popup ("nothing happens on tap"), so use the redirect flow there. Desktop keeps
-// the popup for a smoother, no-reload experience.
-const usesRedirectFlow = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  const standalone =
-    window.matchMedia?.('(display-mode: standalone)').matches === true ||
-    (window.navigator as { standalone?: boolean }).standalone === true;
-  const mobileUA = /Android|iPhone|iPad|iPod|Mobile|Silk|Opera Mini|IEMobile|BlackBerry/i.test(navigator.userAgent);
-  return standalone || mobileUA;
-};
-
-// A desktop popup can still be blocked; these are the codes worth retrying via redirect.
+// A popup can be blocked (installed PWA, in-app webview, aggressive blocker); these
+// are the codes worth retrying via the full-page redirect flow instead.
 const isPopupBlocked = (e: unknown): boolean => {
   const code = (e as { code?: string })?.code ?? '';
   return code === 'auth/popup-blocked'
@@ -191,9 +180,12 @@ export const useAuth = () => {
 
   // Native: the Capacitor Firebase Auth plugin runs the native Google flow, then we
   // complete it in the JS SDK via signInWithCredential so all platforms share one User.
-  // Web desktop: Firebase popup. Web mobile / installed PWA: redirect — the popup is
-  // blocked there, so it would otherwise do nothing on tap. Redirect navigates away
-  // and is finished by the getRedirectResult effect below when the user lands back.
+  // Web (desktop AND mobile): prefer the popup. It completes via postMessage on our own
+  // origin without a full-page navigation, so it doesn't depend on the browser keeping
+  // auth state across a redirect — which mobile browsers (iOS Safari ITP, Chrome's
+  // third-party-storage partitioning) drop, dumping the user back signed-out. The
+  // redirect flow stays only as a fallback for contexts that genuinely block the popup
+  // (installed PWA, in-app webviews); it's finished by the getRedirectResult effect above.
   const signInWithGoogle = useCallback(async (): Promise<boolean> => {
     setError(null);
     setLoading(true);
@@ -209,10 +201,6 @@ export const useAuth = () => {
       }
 
       const provider = new GoogleAuthProvider();
-      if (usesRedirectFlow()) {
-        await signInWithRedirect(auth, provider); // page navigates; resumed on return
-        return true;
-      }
       try {
         await completeGoogleSignIn((await signInWithPopup(auth, provider)).user);
         return true;

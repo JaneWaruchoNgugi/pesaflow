@@ -1,4 +1,4 @@
-import type { Goal, Expense } from '../types';
+import type { Goal, Expense, MonthlyBreakdown, ExpenseCategory } from '../types';
 import { filterByMonth } from './expenses';
 import { calculateMonthlyBreakdown } from './calculations';
 
@@ -60,3 +60,12 @@ export const monthlyHistory = (
   }
   return points;
 };
+
+/** Non-zero expense categories, sorted by amount descending. Shared by Overview + Expenses views. */
+export const categoryBreakdown = (
+  breakdown: MonthlyBreakdown,
+): { category: ExpenseCategory; amount: number }[] =>
+  (Object.entries(breakdown.byCategory) as [ExpenseCategory, number][])
+    .filter(([, v]) => v > 0)
+    .sort(([, a], [, b]) => b - a)
+    .map(([category, amount]) => ({ category, amount }));

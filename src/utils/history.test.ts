@@ -70,3 +70,19 @@ describe('monthlyHistory', () => {
     expect(jul.saved).toBe(43000);
   });
 });
+
+import { categoryBreakdown } from './history';
+import type { MonthlyBreakdown } from '../types';
+
+describe('categoryBreakdown', () => {
+  it('lists non-zero categories sorted by amount desc', () => {
+    const breakdown = {
+      totalExpenses: 0, necessaryTotal: 0, unnecessaryTotal: 0, savingsLeft: 0,
+      byCategory: { food: 3000, transport: 8000, shopping: 0 },
+    } as unknown as MonthlyBreakdown;
+    expect(categoryBreakdown(breakdown)).toEqual([
+      { category: 'transport', amount: 8000 },
+      { category: 'food', amount: 3000 },
+    ]);
+  });
+});

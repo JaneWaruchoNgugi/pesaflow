@@ -112,7 +112,7 @@ export const useExpenses = (billsTotal = 0, goals: Goal[] = []) => {
   const breakdown = useMemo(() => calculateMonthlyBreakdown(monthlyExpenses, profile.monthlyIncome, billsTotal, goalsThisMonth, dailyMultiplier), [monthlyExpenses, profile.monthlyIncome, billsTotal, goalsThisMonth, dailyMultiplier]);
   const insight = useMemo(() => getSpendingInsight(breakdown, profile.monthlyIncome), [breakdown, profile.monthlyIncome]);
   const warnings = useMemo(() => getUnnecessaryWarnings(monthlyExpenses, profile.monthlyIncome), [monthlyExpenses, profile.monthlyIncome]);
-  const history = useMemo(() => monthlyHistory(expenses, goals, billsTotal, profile.monthlyIncome, dailyMultiplier, 6, selectedMonth), [expenses, goals, billsTotal, profile.monthlyIncome, dailyMultiplier, selectedMonth]);
+  const history = useMemo(() => monthlyHistory(expenses, goals, billsTotal, profile.monthlyIncome, dailyMultiplier, 12, selectedMonth), [expenses, goals, billsTotal, profile.monthlyIncome, dailyMultiplier, selectedMonth]);
 
   return { expenses, monthlyExpenses, profile, selectedMonth, setSelectedMonth, breakdown, insight, warnings, history, goalsThisMonth, dailyMultiplier, addExpense, removeExpense, updateExpense, updateProfile };
 };

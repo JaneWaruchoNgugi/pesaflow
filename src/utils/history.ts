@@ -36,30 +36,32 @@ export interface MonthPoint {
 }
 
 /**
- * Per-month derived history for the last `n` months ending at `anchor` (YYYY-MM),
- * oldest-first for left-to-right charting. Bills use the current monthly projection
- * for every month (payments are not dated yet — accepted tradeoff).
+ * Per-month derived history starting at the first month that has an expense or
+ * goal-contribution date, running continuously through `anchor` (YYYY-MM),
+ * capped to the last `maxMonths` entries. Oldest-first for left-to-right charting.
+ * Bills use the current monthly projection for every month (payments are not
+ * dated yet — accepted tradeoff).
  */
 export const monthlyHistory = (
   expenses: Expense[], goals: Goal[], billsMonthlyTotal: number,
-  income: number, dailyMultiplier: number, n = 6, anchor = '',
+  income: number, dailyMultiplier: number, maxMonths = 12, anchor = '',
 ): MonthPoint[] => {
   const end = anchor || new Date().toISOString().slice(0, 7);
-  const points: MonthPoint[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const month = shiftMonth(end, -i);
+  // Earliest month the user actually has data (an expense or a goal contribution), capped at `end`.
+  const dataMonths = [
+    ...expenses.map((e) => e.date.slice(0, 7)),
+    ...goals.flatMap((g) => (g.contributions ?? []).map((c) => c.date.slice(0, 7))),
+  ].filter((m) => m <= end);
+  const firstMonth = dataMonths.length ? dataMonths.reduce((a, b) => (a < b ? a : b)) : end;
+  // Continuous run of months firstMonth..end (oldest-first), capped to the last maxMonths.
+  const months: string[] = [];
+  for (let m = firstMonth; m <= end; m = shiftMonth(m, 1)) months.push(m);
+  return months.slice(-maxMonths).map((month) => {
     const monthExpenses = filterByMonth(expenses, month);
     const goalTotal = goalContributionsInMonth(goals, month);
     const b = calculateMonthlyBreakdown(monthExpenses, income, billsMonthlyTotal, goalTotal, dailyMultiplier);
-    points.push({
-      month,
-      spent: b.totalExpenses,
-      saved: b.savingsLeft,
-      necessary: b.necessaryTotal,
-      unnecessary: b.unnecessaryTotal,
-    });
-  }
-  return points;
+    return { month, spent: b.totalExpenses, saved: b.savingsLeft, necessary: b.necessaryTotal, unnecessary: b.unnecessaryTotal };
+  });
 };
 
 /** Non-zero expense categories, sorted by amount descending. Shared by Overview + Expenses views. */

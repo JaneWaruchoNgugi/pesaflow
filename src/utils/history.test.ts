@@ -69,6 +69,31 @@ describe('monthlyHistory', () => {
     expect(jul.spent).toBe(7000);
     expect(jul.saved).toBe(43000);
   });
+
+  it('starts at the first month with data, ignoring earlier empty months', () => {
+    const expenses = [exp({ date: '2026-08-05', amount: 10000, category: 'food', type: 'necessary' })];
+    const hist = monthlyHistory(expenses, [], 0, 50000, 30, 12, '2026-08');
+    expect(hist.map((h) => h.month)).toEqual(['2026-08']);
+  });
+
+  it('fills a continuous range from the first data month through the anchor', () => {
+    const expenses = [
+      exp({ date: '2026-06-05', amount: 4000, category: 'food', type: 'necessary' }),
+      exp({ date: '2026-08-05', amount: 10000, category: 'food', type: 'necessary' }),
+    ];
+    const hist = monthlyHistory(expenses, [], 0, 50000, 30, 12, '2026-08');
+    expect(hist.map((h) => h.month)).toEqual(['2026-06', '2026-07', '2026-08']);
+  });
+
+  it('counts a goal contribution month as data even with no expenses', () => {
+    const goals = [{
+      id: 'g', name: 'G', targetAmount: 1, savedAmount: 0, category: 'other' as const,
+      deadline: '2027-01', monthlyContribution: 0, notes: '', createdAt: '2026-01-01', completed: false,
+      contributions: [{ id: 'c', amount: 2000, date: '2026-07-10' }],
+    }];
+    const hist = monthlyHistory([], goals, 0, 50000, 30, 12, '2026-08');
+    expect(hist.map((h) => h.month)).toEqual(['2026-07', '2026-08']);
+  });
 });
 
 describe('categoryBreakdown', () => {

@@ -54,15 +54,17 @@ export const sortBillsByDueDate = (bills: Bill[]): Bill[] =>
     return daysA - daysB;
   });
 
+export const billMonthlyAmount = (bill: Bill, dailyMultiplier: number): number => {
+  if (bill.frequency === 'daily')     return bill.amount * dailyMultiplier;
+  if (bill.frequency === 'weekly')    return bill.amount * 4;
+  if (bill.frequency === 'quarterly') return bill.amount / 3;
+  if (bill.frequency === 'annually')  return bill.amount / 12;
+  return bill.amount; // monthly
+};
+
 export const getMonthlyTotal = (bills: Bill[]): number => {
   const dailyMultiplier = readProfileDailyMultiplier();
-  return bills.reduce((sum, bill) => {
-    if (bill.frequency === 'daily')     return sum + bill.amount * dailyMultiplier;
-    if (bill.frequency === 'weekly')    return sum + bill.amount * 4;
-    if (bill.frequency === 'quarterly') return sum + bill.amount / 3;
-    if (bill.frequency === 'annually')  return sum + bill.amount / 12;
-    return sum + bill.amount;
-  }, 0);
+  return bills.reduce((sum, bill) => sum + billMonthlyAmount(bill, dailyMultiplier), 0);
 };
 
 export const getUpcomingBills = (bills: Bill[], days = 7): Bill[] =>

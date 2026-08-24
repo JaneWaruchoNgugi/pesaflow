@@ -12,6 +12,7 @@ import { useAuth }          from './hooks/useAuth';
 import { useHabits }        from './hooks/useHabits';
 import { useEmergencyFund } from './hooks/useEmergencyFund';
 import { useAlerts }        from './hooks/useAlerts';
+import { useLoans }         from './hooks/useLoans';
 
 import { Header, ThemeProvider } from './components/Header';
 import { Dashboard }        from './components/Dashboard';
@@ -31,6 +32,7 @@ import { NetWorth }         from './components/NetWorth';
 import { AIChat }           from './components/AIChat';
 import { EmergencyFund }    from './components/EmergencyFund';
 import { AlertsPanel }      from './components/AlertsPanel';
+import { Loans }            from './components/Loans';
 import { LandingPage }      from './components/LandingPage';
 import { PLAN_LOCKED_VIEWS } from './lib/planAccess';
 import { PaymentGate }      from './components/PaymentGate';
@@ -115,6 +117,7 @@ const MainApp: React.FC = () => {
   const bills   = useBills();
   const netWorth = useNetWorth();
   const habits  = useHabits();
+  const loans   = useLoans();
 
   const {
     expenses, monthlyExpenses, profile, breakdown, insight, warnings, history, goalsThisMonth, dailyMultiplier,
@@ -133,7 +136,8 @@ const MainApp: React.FC = () => {
     investments: investmentSummary.totalInvested,
     goalSavings: goals.totalSaved,
     emergencyFund: emergencyFund.data.currentAmount,
-  }), [netWorth.items, investmentSummary.totalInvested, goals.totalSaved, emergencyFund.data.currentAmount]);
+    loans: loans.loans.map((l) => ({ id: l.id, name: l.name, currentBalance: l.currentBalance, category: l.category })),
+  }), [netWorth.items, investmentSummary.totalInvested, goals.totalSaved, emergencyFund.data.currentAmount, loans.loans]);
 
   const isGuest = auth.status === 'signed-out';
   const hasRealData =
@@ -421,6 +425,14 @@ const MainApp: React.FC = () => {
                 onRemove={netWorth.removeItem}
                 onUpdateAmount={netWorth.updateAmount}
                 currency={profile.currency}
+              />
+              <Loans
+                loans={loans.loans}
+                currency={profile.currency}
+                hasLoanBill={bills.bills.some((b) => b.category === 'loan')}
+                onAdd={loans.addLoan}
+                onRemove={loans.removeLoan}
+                onRecordPayment={loans.recordPayment}
               />
             </div>
           )}

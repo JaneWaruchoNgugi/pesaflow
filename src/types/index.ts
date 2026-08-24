@@ -122,7 +122,7 @@ export interface InvestmentSummary {
 export type GoalCategory =
     | 'emergency' | 'vacation' | 'education' | 'property'
     | 'car' | 'business' | 'retirement' | 'wedding'
-    | 'mmf' | 'sacco' | 'chama' | 'insurance' | 'other';
+    | 'mmf' | 'sacco' | 'chama' | 'insurance' | 'bankSavings' | 'other';
 
 /** For SACCO savings: whether the balance is held as dividend-earning deposits or share capital. */
 export type SaccoHolding = 'dividends' | 'shares';
@@ -149,6 +149,14 @@ export interface Goal {
   interestRate?: number;
   /** Whether the savings are locked in (fixed term) rather than freely withdrawable. */
   lockedIn?: boolean;
+  /** Lock duration in years (for locked-in interest vehicles). */
+  lockYears?: number;
+  /** Endowment sub-type for insurance-category goals. */
+  endowmentType?: 'regular' | 'anticipated';
+  /** Endowment term in years (10|15|20|25|30|35). */
+  termYears?: number;
+  /** Anticipated endowment: payout interval in years (2–10). */
+  payoutIntervalYears?: number;
   /** Chama: total members in the group. */
   chamaMembers?: number;
   /** Chama: this member's payout position in the rotation (1 = receives first). */

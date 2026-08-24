@@ -157,6 +157,8 @@ export interface Goal {
   chamaFrequency?: ChamaFrequency;
   /** Chama: amount each member contributes per period. Pot = chamaContribution × chamaMembers. */
   chamaContribution?: number;
+  /** Dated log of contributions; drives per-month "saved this month". Absent on legacy goals. */
+  contributions?: { id: string; amount: number; date: string }[]; // date = YYYY-MM-DD
   /** Seeded sample data shown to guests; stripped before a real account is created. */
   isDemo?: boolean;
 }

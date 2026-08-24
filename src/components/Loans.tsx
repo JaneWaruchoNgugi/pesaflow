@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Check, X, Plus, Landmark } from 'lucide-react';
 import type { Loan, LiabilityCategory } from '../types';
 import { LIABILITY_META } from '../hooks/netWorth';
-import { loanPaydownPct } from '../hooks/loans';
+import { loanPaydownPct, totalLoanBalance } from '../hooks/loans';
 import { formatCurrency } from '../utils/expenses';
 import { IconSelect } from './ui/IconSelect';
 import { Modal } from './ui/Modal';
@@ -37,7 +37,7 @@ export const Loans: React.FC<LoansProps> = ({ loans, currency, hasLoanBill, onAd
       name: name.trim(), category, principal: p, currentBalance: b,
       interestRate: rate ? num(rate) : undefined,
       monthlyPayment: payment ? num(payment) : undefined,
-      notes, payments: [],
+      notes: notes || undefined, payments: [],
     });
     setName(''); setPrincipal(''); setBalance(''); setRate(''); setPayment(''); setNotes('');
     setShowForm(false);
@@ -49,7 +49,8 @@ export const Loans: React.FC<LoansProps> = ({ loans, currency, hasLoanBill, onAd
     setPayId(null); setPayAmt('');
   };
 
-  const totalOwed = loans.reduce((s, l) => s + l.currentBalance, 0);
+  const canAdd = name.trim() !== '' && num(principal) > 0 && !isNaN(num(balance)) && num(balance) >= 0;
+  const totalOwed = totalLoanBalance(loans);
 
   return (
     <div style={S.card}>
@@ -72,18 +73,18 @@ export const Loans: React.FC<LoansProps> = ({ loans, currency, hasLoanBill, onAd
             <IconSelect value={category} onChange={(v) => setCategory(v)}
               options={(Object.entries(LIABILITY_META) as [LiabilityCategory, typeof LIABILITY_META[LiabilityCategory]][]).map(([k, m]) => ({ value: k, label: m.label, icon: m.icon, color: m.color }))} /></div>
           <div style={S.field}><label style={S.label}>Original Principal (KSh)</label>
-            <input style={S.input} type="number" placeholder="0" value={principal} onChange={(e) => setPrincipal(e.target.value)} /></div>
+            <input style={S.input} type="number" min="0" placeholder="0" value={principal} onChange={(e) => setPrincipal(e.target.value)} /></div>
           <div style={S.field}><label style={S.label}>Current Balance (KSh)</label>
-            <input style={S.input} type="number" placeholder="0" value={balance} onChange={(e) => setBalance(e.target.value)} /></div>
+            <input style={S.input} type="number" min="0" placeholder="0" value={balance} onChange={(e) => setBalance(e.target.value)} /></div>
           <div style={S.field}><label style={S.label}>Interest Rate % p.a. (optional)</label>
-            <input style={S.input} type="number" placeholder="0" value={rate} onChange={(e) => setRate(e.target.value)} /></div>
+            <input style={S.input} type="number" min="0" placeholder="0" value={rate} onChange={(e) => setRate(e.target.value)} /></div>
           <div style={S.field}><label style={S.label}>Monthly Payment (optional)</label>
-            <input style={S.input} type="number" placeholder="0" value={payment} onChange={(e) => setPayment(e.target.value)} /></div>
+            <input style={S.input} type="number" min="0" placeholder="0" value={payment} onChange={(e) => setPayment(e.target.value)} /></div>
           <div style={S.field}><label style={S.label}>Notes</label>
             <input style={S.input} placeholder="Optional..." value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
         </div>
         <div style={S.formBottom}>
-          <button style={{ ...S.saveBtn, opacity: !name.trim() || !principal || !balance ? 0.5 : 1 }} onClick={handleAdd} disabled={!name.trim() || !principal || !balance}><Check size={15} strokeWidth={2.6} /> Save Loan</button>
+          <button style={{ ...S.saveBtn, opacity: canAdd ? 1 : 0.5 }} onClick={handleAdd} disabled={!canAdd}><Check size={15} strokeWidth={2.6} /> Save Loan</button>
         </div>
       </Modal>
 
@@ -112,7 +113,7 @@ export const Loans: React.FC<LoansProps> = ({ loans, currency, hasLoanBill, onAd
             <div style={S.progressLabel}>{pct}% paid off{loan.monthlyPayment ? ` · ${formatCurrency(loan.monthlyPayment, currency)}/mo` : ''}</div>
             {payId === loan.id ? (
               <div style={S.payRow}>
-                <input style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: 13 }} type="number" placeholder="Payment amount" value={payAmt}
+                <input style={{ ...S.input, flex: 1, padding: '6px 10px', fontSize: 13 }} type="number" min="0" placeholder="Payment amount" value={payAmt}
                   onChange={(e) => setPayAmt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePay(loan.id)} autoFocus />
                 <button style={S.confirmBtn} onClick={() => handlePay(loan.id)} aria-label="Confirm payment"><Check size={14} strokeWidth={2.6} /></button>
                 <button style={S.cancelBtn} onClick={() => setPayId(null)} aria-label="Cancel"><X size={14} strokeWidth={2.4} /></button>
@@ -156,7 +157,7 @@ const S: Record<string, React.CSSProperties> = {
   actions: { display: 'flex', gap: 8, alignItems: 'center' },
   payBtn: { flex: 1, padding: '9px 0', background: 'var(--gold-dim)', border: '1px solid var(--border-acc)', color: 'var(--gold)', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'Karla, sans-serif' },
   payRow: { display: 'flex', gap: 6, alignItems: 'center' },
-  confirmBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green-b)', borderRadius: 6 },
-  cancelBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 9px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6 },
+  confirmBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 10px', background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green-b)', borderRadius: 6, cursor: 'pointer' },
+  cancelBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 9px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' },
   removeBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '7px 9px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' },
 };

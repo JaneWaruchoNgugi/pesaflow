@@ -1,6 +1,6 @@
 import React, {type Dispatch, type SetStateAction, useState} from 'react';
 import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, ChevronRight, Crown, Landmark, Lock, Pencil, ReceiptText, Shield, Sparkles, Target, Trophy, TrendingUp, Wallet } from 'lucide-react';
-import type {MonthlyBreakdown, SpendingInsight, FinancialProfile, Bill, Goal, Habit, AppView, SubscriptionTier} from '../types';
+import type {MonthlyBreakdown, SpendingInsight, Expense, FinancialProfile, Bill, Goal, Habit, AppView, SubscriptionTier} from '../types';
 import { formatCurrency, CATEGORY_META } from '../utils/expenses';
 import { MonthSelector } from './MonthSelector';
 import type { MonthPoint } from '../utils/history';
@@ -31,7 +31,7 @@ interface DashboardProps {
   userTier?: SubscriptionTier;
   expenseCount?: number;
   onUpgrade?: (tier: SubscriptionTier) => void;
-  expenses?: import('../types').Expense[];
+  expenses?: Expense[];
   history?: MonthPoint[];
   selectedMonth?: string;
   onSelectMonth?: (month: string) => void;
@@ -209,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100, width: '100%', justifyContent: 'center' }}>
                     <div title={`Spent ${formatCurrency(h.spent, profile.currency)}`}
                       style={{ width: 12, height: `${(h.spent / maxVal) * 100}%`, background: 'var(--blue)', borderRadius: '3px 3px 0 0' }} />
-                    <div title={`Saved ${formatCurrency(h.saved, profile.currency)}`}
+                    <div title={`Remaining ${formatCurrency(h.saved, profile.currency)}`}
                       style={{ width: 12, height: `${(h.saved / maxVal) * 100}%`, background: 'var(--green)', borderRadius: '3px 3px 0 0' }} />
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{h.month.slice(5)}/{h.month.slice(2, 4)}</div>
@@ -218,7 +218,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 11, color: 'var(--text-3)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: 'var(--blue)' }} /> Spent</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: 'var(--green)' }} /> Saved</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: 'var(--green)' }} /> Remaining</span>
               <span style={{ marginLeft: 'auto', fontStyle: 'italic' }}>Bills use current projection</span>
             </div>
           </div>

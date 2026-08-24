@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Check, AlertTriangle, Repeat, X, Pencil, Plus } from 'lucide-react';
-import type { Expense, ExpenseCategory, ExpenseFrequency, MonthlyBreakdown } from '../types';
-import { categoryBreakdown } from '../utils/history';
+import type { Expense, ExpenseCategory, ExpenseFrequency, Bill } from '../types';
+import { expensesWithBills } from '../utils/history';
 import { CATEGORY_META, formatCurrency } from '../utils/expenses';
+import { BILL_META } from '../hooks/bills';
 import { readProfileDailyMultiplier } from '../utils/frequency';
 import { IconSelect } from './ui/IconSelect';
 import { Modal } from './ui/Modal';
@@ -332,16 +333,31 @@ const monthLabel = (m: string): string => {
 };
 
 interface ExpenseSummaryProps {
-  breakdown: MonthlyBreakdown;
+  expenses: Expense[];
+  bills: Bill[];
+  dailyMultiplier: number;
+  goalsThisMonth: number;
   count: number;
   currency: string;
   month?: string;
 }
 
-export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ breakdown, count, currency, month }) => {
-  const rows = categoryBreakdown(breakdown);
-  const total = breakdown.totalExpenses;
-  const necPct = total > 0 ? Math.round((breakdown.necessaryTotal / total) * 100) : 0;
+export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ expenses, bills, dailyMultiplier, goalsThisMonth, count, currency, month }) => {
+  const { total, necessary, unnecessary, categoryRows, billRows, billsSubtotal } = expensesWithBills(expenses, bills, dailyMultiplier);
+  const necPct = total > 0 ? Math.round((necessary / total) * 100) : 0;
+  const row = (icon: React.ReactNode, label: string, amount: number, color?: string) => {
+    const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
+    return (
+      <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ width: 18, flexShrink: 0, display: 'inline-flex' }}>{icon}</span>
+        <span style={{ fontSize: 13, color: 'var(--text-1)', minWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+        <div style={{ flex: 1, height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: color || 'var(--text-3)' }} />
+        </div>
+        <span style={{ fontSize: 13, color: 'var(--text-2)', minWidth: 80, textAlign: 'right' }}>{formatCurrency(amount, currency)}</span>
+      </div>
+    );
+  };
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
@@ -353,26 +369,42 @@ export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ breakdown, count
         <div style={{ width: `${100 - necPct}%`, background: 'var(--amber)' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--text-3)' }}>
-        <span style={{ color: 'var(--green)' }}>Necessary {formatCurrency(breakdown.necessaryTotal, currency)}</span>
-        <span style={{ color: 'var(--amber)' }}>Unnecessary {formatCurrency(breakdown.unnecessaryTotal, currency)}</span>
+        <span style={{ color: 'var(--green)' }}>Necessary {formatCurrency(necessary, currency)}</span>
+        <span style={{ color: 'var(--amber)' }}>Unnecessary {formatCurrency(unnecessary, currency)}</span>
       </div>
-      {rows.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          {rows.map(({ category, amount }) => {
-            const meta = CATEGORY_META[category];
-            const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
-            const Icon = meta?.icon;
-            return (
-              <div key={category} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {Icon && <Icon size={18} strokeWidth={2.1} style={{ color: meta.color, flexShrink: 0 }} />}
-                <span style={{ fontSize: 13, color: 'var(--text-1)', minWidth: 90 }}>{meta?.label}</span>
-                <div style={{ flex: 1, height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', background: meta?.color }} />
-                </div>
-                <span style={{ fontSize: 13, color: 'var(--text-2)', minWidth: 80, textAlign: 'right' }}>{formatCurrency(amount, currency)}</span>
-              </div>
-            );
-          })}
+
+      {categoryRows.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 18, marginBottom: 8 }}>Expenses</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {categoryRows.map(({ category, amount }) => {
+              const meta = CATEGORY_META[category];
+              const Icon = meta?.icon;
+              return row(Icon ? <Icon size={18} strokeWidth={2.1} style={{ color: meta.color }} /> : null, meta?.label ?? category, amount, meta?.color);
+            })}
+          </div>
+        </>
+      )}
+
+      {billRows.length > 0 && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 18, marginBottom: 8 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bills (monthly)</span>
+            <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Subtotal {formatCurrency(billsSubtotal, currency)}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {billRows.map((b) => {
+              const meta = BILL_META[b.category];
+              const Icon = meta?.icon;
+              return row(Icon ? <Icon size={18} strokeWidth={2.1} style={{ color: meta.color }} /> : null, b.name, b.amount, meta?.color);
+            })}
+          </div>
+        </>
+      )}
+
+      {goalsThisMonth > 0 && (
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px dashed var(--border)', fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>
+          ＋{formatCurrency(goalsThisMonth, currency)} set aside to goals this month (saved separately)
         </div>
       )}
     </div>

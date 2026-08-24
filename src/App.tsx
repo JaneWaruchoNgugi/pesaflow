@@ -116,7 +116,7 @@ const MainApp: React.FC = () => {
   const habits  = useHabits();
 
   const {
-    expenses, monthlyExpenses, profile, breakdown, insight, warnings, history, goalsThisMonth,
+    expenses, monthlyExpenses, profile, breakdown, insight, warnings, history, goalsThisMonth, dailyMultiplier,
     selectedMonth, setSelectedMonth, addExpense, removeExpense, updateExpense, updateProfile,
   } = useExpenses(bills.monthlyTotal, goals.goals);
 
@@ -337,7 +337,7 @@ const MainApp: React.FC = () => {
                   <Download size={14} strokeWidth={2.2} /> Export CSV
                 </button>
               </div>
-              <ExpenseSummary breakdown={breakdown} count={monthlyExpenses.length} currency={profile.currency} month={selectedMonth} />
+              <ExpenseSummary expenses={monthlyExpenses} bills={bills.bills} dailyMultiplier={dailyMultiplier} goalsThisMonth={goalsThisMonth} count={monthlyExpenses.length} currency={profile.currency} month={selectedMonth} />
               <ExpenseForm onAdd={addExpense} />
               <ExpenseList expenses={monthlyExpenses} onRemove={removeExpense} onUpdate={updateExpense} currency={profile.currency} />
             </div>

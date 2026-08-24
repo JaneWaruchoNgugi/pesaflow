@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { goalContributionsInMonth, availableMonths, monthlyHistory } from './history';
-import type { Goal, Expense } from '../types';
+import { goalContributionsInMonth, availableMonths, monthlyHistory, categoryBreakdown } from './history';
+import type { Goal, Expense, MonthlyBreakdown } from '../types';
 
 const baseGoal = (over: Partial<Goal>): Goal => ({
   id: 'g1', name: 'Test', targetAmount: 100000, savedAmount: 0,
@@ -70,9 +70,6 @@ describe('monthlyHistory', () => {
     expect(jul.saved).toBe(43000);
   });
 });
-
-import { categoryBreakdown } from './history';
-import type { MonthlyBreakdown } from '../types';
 
 describe('categoryBreakdown', () => {
   it('lists non-zero categories sorted by amount desc', () => {

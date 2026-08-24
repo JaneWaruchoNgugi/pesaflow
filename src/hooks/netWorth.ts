@@ -45,3 +45,47 @@ const groupByCategory = (items: NetWorthItem[]): Record<string, number> => {
   }
   return result;
 };
+
+export interface NetWorthLine {
+  id: string;
+  name: string;
+  amount: number;
+  category: AssetCategory | LiabilityCategory;
+  type: 'asset' | 'liability';
+  auto?: boolean;           // true = derived/read-only virtual line
+  notes?: string;
+}
+
+export interface DerivedNetWorth {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  assetLines: NetWorthLine[];
+  liabilityLines: NetWorthLine[];
+}
+
+/**
+ * Combine manually-entered net-worth items with auto-derived virtual asset lines
+ * (investments, goal savings, emergency fund). Virtual lines are read-only and never
+ * persisted — recomputed each render from their source so they cannot drift.
+ */
+export const deriveNetWorth = (
+  manualItems: NetWorthItem[],
+  sources: { investments: number; goalSavings: number; emergencyFund: number },
+): DerivedNetWorth => {
+  const assetLines: NetWorthLine[] = [];
+  const liabilityLines: NetWorthLine[] = [];
+  for (const it of manualItems) {
+    const line: NetWorthLine = { id: it.id, name: it.name, amount: it.amount, category: it.category, type: it.type, auto: false, notes: it.notes };
+    (it.type === 'asset' ? assetLines : liabilityLines).push(line);
+  }
+  const virtual: NetWorthLine[] = [
+    { id: 'auto:investments', name: 'Investments',    amount: sources.investments,   category: 'investments', type: 'asset', auto: true },
+    { id: 'auto:goals',       name: 'Goal savings',   amount: sources.goalSavings,   category: 'cash',        type: 'asset', auto: true },
+    { id: 'auto:emergency',   name: 'Emergency fund', amount: sources.emergencyFund, category: 'cash',        type: 'asset', auto: true },
+  ];
+  for (const v of virtual) if (v.amount > 0) assetLines.push(v);
+  const totalAssets = assetLines.reduce((s, l) => s + l.amount, 0);
+  const totalLiabilities = liabilityLines.reduce((s, l) => s + l.amount, 0);
+  return { totalAssets, totalLiabilities, netWorth: totalAssets - totalLiabilities, assetLines, liabilityLines };
+};

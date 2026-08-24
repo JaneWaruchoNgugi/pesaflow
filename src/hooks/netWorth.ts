@@ -65,9 +65,10 @@ export interface DerivedNetWorth {
 }
 
 /**
- * Combine manually-entered net-worth items with auto-derived virtual asset lines
- * (investments, goal savings, emergency fund). Virtual lines are read-only and never
- * persisted — recomputed each render from their source so they cannot drift.
+ * Combine manually-entered net-worth items with auto-derived virtual lines:
+ * asset lines (investments, goal savings, emergency fund) and liability lines
+ * (each loan's remaining balance). Virtual lines are read-only and never persisted —
+ * recomputed each render from their source so they cannot drift.
  */
 export const deriveNetWorth = (
   manualItems: NetWorthItem[],

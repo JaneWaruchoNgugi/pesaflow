@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { goalContributionsInMonth } from './history';
-import type { Goal } from '../types';
+import { goalContributionsInMonth, availableMonths, monthlyHistory } from './history';
+import type { Goal, Expense } from '../types';
 
 const baseGoal = (over: Partial<Goal>): Goal => ({
   id: 'g1', name: 'Test', targetAmount: 100000, savedAmount: 0,
@@ -30,5 +30,43 @@ describe('goalContributionsInMonth', () => {
 
   it('returns 0 for an empty goal list', () => {
     expect(goalContributionsInMonth([], '2026-08')).toBe(0);
+  });
+});
+
+const exp = (over: Partial<Expense>): Expense => ({
+  id: 'e', name: 'x', amount: 0, category: 'food', type: 'necessary',
+  date: '2026-08-10', isRecurring: false, ...over,
+});
+
+describe('availableMonths', () => {
+  it('returns unique months newest-first, including the current month', () => {
+    const expenses = [exp({ date: '2026-07-02' }), exp({ date: '2026-08-09' }), exp({ date: '2026-08-20' })];
+    const months = availableMonths(expenses, '2026-08');
+    expect(months).toEqual(['2026-08', '2026-07']);
+  });
+});
+
+describe('monthlyHistory', () => {
+  it('derives spent and saved per month from dated data', () => {
+    const expenses = [
+      exp({ date: '2026-08-05', amount: 10000, category: 'food', type: 'necessary' }),
+      exp({ date: '2026-07-05', amount: 4000, category: 'food', type: 'necessary' }),
+    ];
+    const goals = [{
+      id: 'g', name: 'G', targetAmount: 1, savedAmount: 50000, category: 'other' as const,
+      deadline: '2027-01', monthlyContribution: 0, notes: '', createdAt: '2026-01-01', completed: false,
+      contributions: [{ id: 'c', amount: 2000, date: '2026-08-01' }],
+    }];
+    // billsTotal 3000, income 50000, dailyMultiplier 30, months anchored at 2026-08
+    const hist = monthlyHistory(expenses, goals, 3000, 50000, 30, 2, '2026-08');
+    expect(hist.map((h) => h.month)).toEqual(['2026-07', '2026-08']); // oldest-first for charting
+    const aug = hist[1];
+    // spent = expenses 10000 + bills 3000 + goal-this-month 2000 = 15000
+    expect(aug.spent).toBe(15000);
+    expect(aug.saved).toBe(35000); // 50000 - 15000
+    const jul = hist[0];
+    // spent = 4000 + 3000 bills + 0 goal = 7000
+    expect(jul.spent).toBe(7000);
+    expect(jul.saved).toBe(43000);
   });
 });

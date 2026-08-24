@@ -47,10 +47,17 @@ export const useGoals = () => {
   }, [goals]);
 
   const contribute = useCallback((id: string, amount: number) => {
+    const today = new Date().toISOString().slice(0, 10);
     persist(goals.map((g) => {
       if (g.id !== id) return g;
       const newSaved = g.savedAmount + amount;
-      return { ...g, savedAmount: newSaved, completed: newSaved >= g.targetAmount };
+      const entry = { id: generateId(), amount, date: today };
+      return {
+        ...g,
+        savedAmount: newSaved,
+        contributions: [...(g.contributions ?? []), entry],
+        completed: newSaved >= g.targetAmount,
+      };
     }));
   }, [goals]);
 

@@ -49,7 +49,7 @@ export const Loans: React.FC<LoansProps> = ({ loans, currency, hasLoanBill, onAd
     setPayId(null); setPayAmt('');
   };
 
-  const canAdd = name.trim() !== '' && num(principal) > 0 && !isNaN(num(balance)) && num(balance) >= 0;
+  const canAdd = name.trim() !== '' && num(principal) > 0 && !isNaN(num(balance)) && num(balance) >= 0 && num(balance) <= num(principal);
   const totalOwed = totalLoanBalance(loans);
 
   return (

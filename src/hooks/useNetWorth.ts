@@ -1,7 +1,6 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { NetWorthItem } from '../types';
 import { generateId } from '../utils/expenses';
-import { calculateNetWorth } from "./netWorth.ts";
 import { syncCollection, deleteFromCollection, fetchCollection } from '../lib/sync';
 
 const STORAGE_KEY = 'finwise_networth';
@@ -37,7 +36,6 @@ export const useNetWorth = () => {
   }, [items]);
 
   const updateAmount = useCallback((id: string, amount: number) => persist(items.map((i) => i.id === id ? { ...i, amount } : i)), [items]);
-  const summary      = useMemo(() => calculateNetWorth(items), [items]);
 
-  return { items, summary, addItem, removeItem, updateAmount };
+  return { items, addItem, removeItem, updateAmount };
 };

@@ -71,7 +71,10 @@ export interface DerivedNetWorth {
  */
 export const deriveNetWorth = (
   manualItems: NetWorthItem[],
-  sources: { investments: number; goalSavings: number; emergencyFund: number },
+  sources: {
+    investments: number; goalSavings: number; emergencyFund: number;
+    loans?: { id: string; name: string; currentBalance: number; category: LiabilityCategory }[];
+  },
 ): DerivedNetWorth => {
   const assetLines: NetWorthLine[] = [];
   const liabilityLines: NetWorthLine[] = [];
@@ -80,11 +83,16 @@ export const deriveNetWorth = (
     (it.type === 'asset' ? assetLines : liabilityLines).push(line);
   }
   const virtual: NetWorthLine[] = [
-    { id: 'auto:investments', name: 'Investments',    amount: sources.investments,   category: 'investments', type: 'asset', auto: true },
-    { id: 'auto:goals',       name: 'Goal savings',   amount: sources.goalSavings,   category: 'cash',        type: 'asset', auto: true },
-    { id: 'auto:emergency',   name: 'Emergency fund', amount: sources.emergencyFund, category: 'cash',        type: 'asset', auto: true },
+    { id: 'auto:investments', name: 'Investments',   amount: sources.investments,   category: 'investments', type: 'asset', auto: true },
+    { id: 'auto:goals',       name: 'Goal savings',  amount: sources.goalSavings,   category: 'cash',        type: 'asset', auto: true },
+    { id: 'auto:emergency',   name: 'Emergency fund', amount: sources.emergencyFund, category: 'cash',       type: 'asset', auto: true },
   ];
   for (const v of virtual) if (v.amount > 0) assetLines.push(v);
+  for (const loan of sources.loans ?? []) {
+    if (loan.currentBalance > 0) {
+      liabilityLines.push({ id: `loan:${loan.id}`, name: loan.name, amount: loan.currentBalance, category: loan.category, type: 'liability', auto: true });
+    }
+  }
   const totalAssets = assetLines.reduce((s, l) => s + l.amount, 0);
   const totalLiabilities = liabilityLines.reduce((s, l) => s + l.amount, 0);
   return { totalAssets, totalLiabilities, netWorth: totalAssets - totalLiabilities, assetLines, liabilityLines };

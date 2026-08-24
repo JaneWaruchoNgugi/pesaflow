@@ -40,4 +40,30 @@ describe('deriveNetWorth', () => {
     expect(r.totalLiabilities).toBe(20000);
     expect(r.netWorth).toBe(30000);
   });
+
+  it('adds an auto liability line per loan with balance > 0', () => {
+    const r = deriveNetWorth([], {
+      investments: 0, goalSavings: 0, emergencyFund: 0,
+      loans: [
+        { id: 'x', name: 'Mkopa phone', currentBalance: 2380, category: 'personalLoan' },
+        { id: 'y', name: 'Cleared',      currentBalance: 0,    category: 'carLoan' },
+      ],
+    });
+    expect(r.totalLiabilities).toBe(2380);
+    expect(r.liabilityLines).toHaveLength(1);
+    expect(r.liabilityLines[0].id).toBe('loan:x');
+    expect(r.liabilityLines[0].auto).toBe(true);
+    expect(r.netWorth).toBe(-2380);
+  });
+
+  it('combines manual liabilities with loan liability lines', () => {
+    const items = [{ id: 'm', name: 'Credit card', amount: 5000, category: 'creditCard' as const, type: 'liability' as const, notes: '' }];
+    const r = deriveNetWorth(items, {
+      investments: 10000, goalSavings: 0, emergencyFund: 0,
+      loans: [{ id: 'x', name: 'Loan', currentBalance: 3000, category: 'personalLoan' }],
+    });
+    expect(r.totalAssets).toBe(10000);
+    expect(r.totalLiabilities).toBe(8000); // 5000 manual + 3000 loan
+    expect(r.netWorth).toBe(2000);
+  });
 });

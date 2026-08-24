@@ -337,7 +337,7 @@ const MainApp: React.FC = () => {
                   <Download size={14} strokeWidth={2.2} /> Export CSV
                 </button>
               </div>
-              <ExpenseSummary breakdown={breakdown} count={monthlyExpenses.length} currency={profile.currency} />
+              <ExpenseSummary breakdown={breakdown} count={monthlyExpenses.length} currency={profile.currency} month={selectedMonth} />
               <ExpenseForm onAdd={addExpense} />
               <ExpenseList expenses={monthlyExpenses} onRemove={removeExpense} onUpdate={updateExpense} currency={profile.currency} />
             </div>

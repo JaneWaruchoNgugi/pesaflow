@@ -4,7 +4,7 @@ import type {MonthlyBreakdown, SpendingInsight, Expense, FinancialProfile, Bill,
 import { formatCurrency, CATEGORY_META } from '../utils/expenses';
 import { MonthSelector } from './MonthSelector';
 import type { MonthPoint } from '../utils/history';
-import { availableMonths } from '../utils/history';
+import { availableMonths, categoryBreakdown } from '../utils/history';
 import { HabitsTracker } from './HabitsTracker';
 
 interface DashboardProps {
@@ -73,8 +73,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const unnecessaryPct = profile.monthlyIncome > 0
     ? Math.min(100, Math.round((breakdown.unnecessaryTotal / profile.monthlyIncome) * 100)) : 0;
 
-  const topCategories = Object.entries(breakdown.byCategory)
-    .filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a).slice(0, 5);
+  const topCategories = categoryBreakdown(breakdown).slice(0, 5);
 
   const billsDue = bills.filter((b) => b.status !== 'paid');
   const billsOverdue = bills.filter((b) => b.status === 'overdue');
@@ -253,11 +252,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div style={S.emptyState}>No expenses yet this month</div>
           ) : (
             <div style={S.categoryList}>
-              {topCategories.map(([cat, amount]) => {
-                const meta = CATEGORY_META[cat as keyof typeof CATEGORY_META];
+              {topCategories.map(({ category, amount }) => {
+                const meta = CATEGORY_META[category];
                 const pct = breakdown.totalExpenses > 0 ? Math.round((amount / breakdown.totalExpenses) * 100) : 0;
                 return (
-                  <div key={cat} style={S.categoryItem}>
+                  <div key={category} style={S.categoryItem}>
                     <div style={S.catLeft}>
                       {(() => { const Icon = meta?.icon; return Icon ? <span style={S.catIcon}><Icon size={20} strokeWidth={2.1} style={{ color: meta?.color }} /></span> : null; })()}
                       <div>

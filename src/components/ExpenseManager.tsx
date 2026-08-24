@@ -326,20 +326,26 @@ const S: Record<string, React.CSSProperties> = {
   cancelBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 16px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: 9, fontSize: 14, fontWeight: 600, fontFamily: 'Karla, sans-serif', cursor: 'pointer' },
 };
 
+const monthLabel = (m: string): string => {
+  const [y, mo] = m.split('-').map(Number);
+  return new Date(y, mo - 1, 1).toLocaleDateString('en-KE', { month: 'long', year: 'numeric' });
+};
+
 interface ExpenseSummaryProps {
   breakdown: MonthlyBreakdown;
   count: number;
   currency: string;
+  month?: string;
 }
 
-export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ breakdown, count, currency }) => {
+export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ breakdown, count, currency, month }) => {
   const rows = categoryBreakdown(breakdown);
   const total = breakdown.totalExpenses;
   const necPct = total > 0 ? Math.round((breakdown.necessaryTotal / total) * 100) : 0;
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>This month · {count} {count === 1 ? 'entry' : 'entries'}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{month ? monthLabel(month) : 'This month'} · {count} {count === 1 ? 'entry' : 'entries'}</span>
         <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, fontWeight: 700, color: 'var(--text-1)' }}>{formatCurrency(total, currency)}</span>
       </div>
       <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>

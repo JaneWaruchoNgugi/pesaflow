@@ -47,6 +47,8 @@ export const Advisor: React.FC<AdvisorProps> = ({ profile, onUpdateIncome, bills
   const advice: InvestmentAdvice = getInvestmentAdvice(income);
 
   const actualSpend = breakdown?.totalExpenses ?? 0;
+  // Expenses only — byCategory holds expense categories; bills and goals are shown on their own rows below.
+  const expensesOnly = breakdown ? Object.values(breakdown.byCategory).reduce((s, v) => s + v, 0) : 0;
   const actualSavings = income > 0 ? Math.max(0, income - actualSpend) : 0;
 
   const applyStreams = () => {
@@ -293,7 +295,7 @@ export const Advisor: React.FC<AdvisorProps> = ({ profile, onUpdateIncome, bills
               <div style={S.cardTitle}><ChartColumn size={22} strokeWidth={2.1} style={S.titleIcon} /> Actual vs Recommended</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { label: 'Total Spending', actual: actualSpend, recommended: advice.living + advice.emergencyFund, color: actualSpend > advice.living + advice.emergencyFund ? 'var(--red)' : 'var(--green)' },
+                  { label: 'Expenses', actual: expensesOnly, recommended: advice.living, color: expensesOnly > advice.living ? 'var(--red)' : 'var(--green)' },
                   { label: 'Bills', actual: billsTotal, recommended: Math.round(income * 0.3), color: billsTotal > income * 0.3 ? 'var(--red)' : 'var(--green)' },
                   { label: 'Goals Contributed', actual: goalsTotal, recommended: advice.savings, color: goalsTotal >= advice.savings ? 'var(--green)' : 'var(--amber)' },
                   { label: 'Remaining / Savings', actual: actualSavings, recommended: advice.savings + advice.investment, color: actualSavings >= advice.savings ? 'var(--green)' : 'var(--red)' },

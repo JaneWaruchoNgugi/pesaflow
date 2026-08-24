@@ -297,7 +297,7 @@ const MainApp: React.FC = () => {
               profile={profile}
               onUpdateIncome={handleUpdateIncome}
               billsTotal={bills.monthlyTotal}
-              goalsTotal={goals.totalSaved}
+              goalsTotal={goalsThisMonth}
               breakdown={breakdown}
             />
           )}

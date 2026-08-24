@@ -1,6 +1,7 @@
-import type { Goal, Expense, MonthlyBreakdown, ExpenseCategory } from '../types';
+import type { Goal, Expense, MonthlyBreakdown, ExpenseCategory, Bill, BillCategory } from '../types';
 import { filterByMonth } from './expenses';
 import { calculateMonthlyBreakdown } from './calculations';
+import { billMonthlyAmount } from '../hooks/bills';
 
 /**
  * Sum of a goal's dated contributions falling in `month` (YYYY-MM).
@@ -69,3 +70,37 @@ export const categoryBreakdown = (
     .filter(([, v]) => v > 0)
     .sort(([, a], [, b]) => b - a)
     .map(([category, amount]) => ({ category, amount }));
+
+export interface BillRow { id: string; name: string; category: BillCategory; amount: number; }
+
+export interface ExpensesWithBills {
+  total: number;          // expenses + bills (excludes goal contributions)
+  necessary: number;      // necessary expenses + bills
+  unnecessary: number;    // unnecessary expenses
+  categoryRows: { category: ExpenseCategory; amount: number }[];
+  billRows: BillRow[];    // itemized, monthly-equivalent
+  billsSubtotal: number;
+}
+
+/**
+ * Expenses view-model: expense categories PLUS itemized bills, so the total visibly
+ * reconciles. Goal contributions are intentionally excluded (shown separately as saving).
+ */
+export const expensesWithBills = (
+  monthlyExpenses: Expense[], bills: Bill[], dailyMultiplier: number,
+): ExpensesWithBills => {
+  // income/bills/goals set to 0 → pure expense breakdown (byCategory, necessary, unnecessary).
+  const expenseOnly = calculateMonthlyBreakdown(monthlyExpenses, 0, 0, 0, dailyMultiplier);
+  const billRows: BillRow[] = bills.map((b) => ({
+    id: b.id, name: b.name, category: b.category, amount: billMonthlyAmount(b, dailyMultiplier),
+  }));
+  const billsSubtotal = billRows.reduce((s, r) => s + r.amount, 0);
+  const necessary = expenseOnly.necessaryTotal + billsSubtotal;
+  const unnecessary = expenseOnly.unnecessaryTotal;
+  return {
+    total: necessary + unnecessary,
+    necessary, unnecessary,
+    categoryRows: categoryBreakdown(expenseOnly),
+    billRows, billsSubtotal,
+  };
+};

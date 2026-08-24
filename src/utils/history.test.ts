@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { goalContributionsInMonth, availableMonths, monthlyHistory, categoryBreakdown } from './history';
-import type { Goal, Expense, MonthlyBreakdown } from '../types';
+import { goalContributionsInMonth, availableMonths, monthlyHistory, categoryBreakdown, expensesWithBills } from './history';
+import type { Goal, Expense, MonthlyBreakdown, Bill } from '../types';
 
 const baseGoal = (over: Partial<Goal>): Goal => ({
   id: 'g1', name: 'Test', targetAmount: 100000, savedAmount: 0,
@@ -81,5 +81,36 @@ describe('categoryBreakdown', () => {
       { category: 'transport', amount: 8000 },
       { category: 'food', amount: 3000 },
     ]);
+  });
+});
+
+const bill2 = (over: Partial<Bill>): Bill => ({
+  id: 'b', name: 'B', amount: 0, category: 'other', dueDay: 1, frequency: 'monthly',
+  status: 'upcoming', notes: '', isRecurring: true, ...over,
+});
+
+describe('expensesWithBills', () => {
+  it('totals expenses + bills, excludes goals, itemizes bills', () => {
+    const expenses = [
+      exp({ date: '2026-08-01', amount: 8000, category: 'transport', type: 'necessary' }),
+      exp({ date: '2026-08-02', amount: 1200, category: 'diningOut', type: 'unnecessary' }),
+    ];
+    const bills = [
+      bill2({ id: 'r', name: 'Rent', category: 'rent', amount: 5000 }),
+      bill2({ id: 'w', name: 'Wifi', category: 'internet', amount: 2000 }),
+    ];
+    const r = expensesWithBills(expenses, bills, 30);
+    expect(r.billsSubtotal).toBe(7000);
+    expect(r.total).toBe(16200);      // 8000 + 1200 + 7000
+    expect(r.necessary).toBe(15000);  // 8000 transport + 7000 bills
+    expect(r.unnecessary).toBe(1200);
+    expect(r.billRows).toHaveLength(2);
+    expect(r.categoryRows.map((c) => c.category)).toEqual(['transport', 'diningOut']);
+  });
+
+  it('empty bills yields subtotal 0', () => {
+    const r = expensesWithBills([], [], 30);
+    expect(r.billsSubtotal).toBe(0);
+    expect(r.total).toBe(0);
   });
 });

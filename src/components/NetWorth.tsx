@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { Check, X, Pencil, TrendingUp, TrendingDown, Plus } from 'lucide-react';
 import type { NetWorthItem, AssetCategory, LiabilityCategory } from '../types';
-import { ASSET_META, LIABILITY_META, calculateNetWorth } from '../hooks/netWorth';
+import { ASSET_META, LIABILITY_META } from '../hooks/netWorth';
+import type { NetWorthLine, DerivedNetWorth } from '../hooks/netWorth';
 import { formatCurrency } from '../utils/expenses';
 import { IconSelect } from './ui/IconSelect';
 import { Modal } from './ui/Modal';
 
 interface NetWorthProps {
-  items: NetWorthItem[];
-  summary: ReturnType<typeof calculateNetWorth>;
+  assetLines: NetWorthLine[];
+  liabilityLines: NetWorthLine[];
+  summary: DerivedNetWorth;
   onAdd: (data: Omit<NetWorthItem, 'id'>) => void;
   onRemove: (id: string) => void;
   onUpdateAmount: (id: string, amount: number) => void;
   currency: string;
 }
 
-export const NetWorth: React.FC<NetWorthProps> = ({ items, summary, onAdd, onRemove, onUpdateAmount, currency }) => {
+export const NetWorth: React.FC<NetWorthProps> = ({ assetLines, liabilityLines, summary, onAdd, onRemove, onUpdateAmount, currency }) => {
   const [type, setType]         = useState<'asset' | 'liability'>('asset');
   const [name, setName]         = useState('');
   const [amount, setAmount]     = useState('');
@@ -44,8 +46,8 @@ export const NetWorth: React.FC<NetWorthProps> = ({ items, summary, onAdd, onRem
     setEditId(null); setEditAmt('');
   };
 
-  const assets      = items.filter((i) => i.type === 'asset');
-  const liabilities = items.filter((i) => i.type === 'liability');
+  const assets      = assetLines;
+  const liabilities = liabilityLines;
   const netWorthColor = summary.netWorth >= 0 ? 'var(--green)' : 'var(--red)';
 
   // Donut chart values
@@ -179,11 +181,14 @@ export const NetWorth: React.FC<NetWorthProps> = ({ items, summary, onAdd, onRem
                 <div key={item.id} style={S.itemRow}>
                   <div style={{ ...S.itemIcon, background: `${meta.color}18` }}><Icon size={18} strokeWidth={2.1} style={{ color: meta.color }} /></div>
                   <div style={S.itemInfo}>
-                    <div style={S.itemName}>{item.name}</div>
-                    <div style={{ ...S.itemCat, color: meta.color }}>{meta.label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={S.itemName}>{item.name}</div>
+                      {item.auto && <span style={S.autoBadge}>Auto</span>}
+                    </div>
+                    <div style={{ ...S.itemCat, color: meta.color }}>{item.auto ? `From your ${meta.label}` : meta.label}</div>
                     <div style={S.itemBar}><div style={{ ...S.itemBarFill, width: `${pct}%`, background: meta.color }} /></div>
                   </div>
-                  {editId === item.id ? (
+                  {editId === item.id && !item.auto ? (
                     <div style={S.editRow}>
                       <input style={{ ...S.input, width: 100, padding: '6px 10px', fontSize: 13 }}
                         type="number" value={editAmt} onChange={(e) => setEditAmt(e.target.value)}
@@ -197,10 +202,12 @@ export const NetWorth: React.FC<NetWorthProps> = ({ items, summary, onAdd, onRem
                       <div style={S.itemPct}>{pct}%</div>
                     </div>
                   )}
-                  <div style={S.rowActions}>
-                    <button style={{ ...S.editBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { setEditId(item.id); setEditAmt(String(item.amount)); }} aria-label="Edit"><Pencil size={13} strokeWidth={2.2} /></button>
-                    <button style={{ ...S.removeBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => onRemove(item.id)} aria-label="Remove"><X size={13} strokeWidth={2.4} /></button>
-                  </div>
+                  {!item.auto && (
+                    <div style={S.rowActions}>
+                      <button style={{ ...S.editBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { setEditId(item.id); setEditAmt(String(item.amount)); }} aria-label="Edit"><Pencil size={13} strokeWidth={2.2} /></button>
+                      <button style={{ ...S.removeBtn, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => onRemove(item.id)} aria-label="Remove"><X size={13} strokeWidth={2.4} /></button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -258,6 +265,7 @@ const S: Record<string, React.CSSProperties> = {
   itemRight: { textAlign: 'right', flexShrink: 0, minWidth: 80 },
   itemAmount: { fontFamily: 'Cormorant Garamond, serif', fontSize: 15, fontWeight: 700 },
   itemPct: { fontSize: 11, color: 'var(--text-3)' },
+  autoBadge: { fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-3)', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px' },
   editRow: { display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 },
   saveBtn: { padding: '5px 10px', background: 'var(--green-dim)', color: 'var(--green)', border: '1px solid var(--green-b)', borderRadius: 6, fontSize: 13 },
   cancelBtn: { padding: '5px 8px', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 },

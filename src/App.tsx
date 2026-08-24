@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BarChart3, Bell, Bot, Crown, Download, Landmark, Lock, ReceiptText, Shield, Sparkles, TrendingUp } from 'lucide-react';
 import './styles/globals.css';
 import type { AppView, SubscriptionTier } from './types';
@@ -7,6 +7,7 @@ import { useInvestments }   from './hooks/useInvestments';
 import { useGoals }         from './hooks/useGoals';
 import { useBills }         from './hooks/useBills';
 import { useNetWorth }      from './hooks/useNetWorth';
+import { deriveNetWorth }   from './hooks/netWorth';
 import { useAuth }          from './hooks/useAuth';
 import { useHabits }        from './hooks/useHabits';
 import { useEmergencyFund } from './hooks/useEmergencyFund';
@@ -127,6 +128,12 @@ const MainApp: React.FC = () => {
 
   const emergencyFund = useEmergencyFund(breakdown.totalExpenses || profile.monthlyIncome * 0.6);
   const alerts = useAlerts();
+
+  const nwSummary = useMemo(() => deriveNetWorth(netWorth.items, {
+    investments: investmentSummary.totalInvested,
+    goalSavings: goals.totalSaved,
+    emergencyFund: emergencyFund.data.currentAmount,
+  }), [netWorth.items, investmentSummary.totalInvested, goals.totalSaved, emergencyFund.data.currentAmount]);
 
   const isGuest = auth.status === 'signed-out';
   const hasRealData =
@@ -306,7 +313,7 @@ const MainApp: React.FC = () => {
               bills={bills.bills}
               billsMonthlyTotal={bills.monthlyTotal}
               goals={goals.goals}
-              netWorthSummary={netWorth.summary}
+              netWorthSummary={nwSummary}
               habits={habits.habits}
               habitsCompletedCount={habits.completedCount}
               habitsCompletionPct={habits.completionPct}
@@ -407,8 +414,9 @@ const MainApp: React.FC = () => {
                 </button>
               </div>
               <NetWorth
-                items={netWorth.items}
-                summary={netWorth.summary}
+                assetLines={nwSummary.assetLines}
+                liabilityLines={nwSummary.liabilityLines}
+                summary={nwSummary}
                 onAdd={netWorth.addItem}
                 onRemove={netWorth.removeItem}
                 onUpdateAmount={netWorth.updateAmount}
@@ -450,7 +458,7 @@ const MainApp: React.FC = () => {
               bills={bills.bills}
               billsMonthlyTotal={bills.monthlyTotal}
               goals={goals.goals}
-              netWorthSummary={netWorth.summary}
+              netWorthSummary={nwSummary}
               habits={habits.habits}
               efCurrent={emergencyFund.data.currentAmount}
               efTarget={emergencyFund.targetAmount}
@@ -472,7 +480,7 @@ const MainApp: React.FC = () => {
               bills={bills.bills}
               billsMonthlyTotal={bills.monthlyTotal}
               goals={goals.goals}
-              netWorthSummary={netWorth.summary}
+              netWorthSummary={nwSummary}
               efCurrent={emergencyFund.data.currentAmount}
               efTarget={emergencyFund.targetAmount}
               userName={auth.profile?.name}

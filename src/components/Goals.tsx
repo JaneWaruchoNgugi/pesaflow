@@ -263,7 +263,7 @@ export const Goals: React.FC<GoalsProps> = ({
                 <label style={S.label}>Endowment type</label>
                 <div style={S.holdingRow}>
                   {(['regular', 'anticipated'] as const).map((t) => (
-                    <button key={t} type="button" onClick={() => setEndowmentType(t)}
+                    <button key={t} type="button" disabled={goalLimitReached && !editId} onClick={() => setEndowmentType(t)}
                       style={{ ...S.holdingBtn, ...(endowmentType === t ? S.holdingBtnActive : {}) }}>
                       {t === 'regular' ? 'Regular' : 'Anticipated'}
                     </button>
@@ -272,18 +272,18 @@ export const Goals: React.FC<GoalsProps> = ({
               </div>
               <div style={S.field}>
                 <label style={S.label}>Term (years)</label>
-                <select style={S.select} value={termYears} onChange={(e) => setTermYears(e.target.value)}>
+                <select style={S.select} value={termYears} onChange={(e) => setTermYears(e.target.value)} disabled={goalLimitReached && !editId}>
                   {[10, 15, 20, 25, 30, 35].map((y) => <option key={y} value={y}>{y} years</option>)}
                 </select>
               </div>
               <div style={S.field}>
                 <label style={S.label}>Interest rate (% p.a.)</label>
-                <input style={S.input} type="number" min="0" step="0.1" placeholder="e.g. 8" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
+                <input style={S.input} type="number" min="0" step="0.1" placeholder="e.g. 8" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} disabled={goalLimitReached && !editId} />
               </div>
               {endowmentType === 'anticipated' && (
                 <div style={S.field}>
                   <label style={S.label}>Payout every (years)</label>
-                  <select style={S.select} value={payoutInterval} onChange={(e) => setPayoutInterval(e.target.value)}>
+                  <select style={S.select} value={payoutInterval} onChange={(e) => setPayoutInterval(e.target.value)} disabled={goalLimitReached && !editId}>
                     {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((y) => <option key={y} value={y}>Every {y} years</option>)}
                   </select>
                 </div>
@@ -497,7 +497,7 @@ export const Goals: React.FC<GoalsProps> = ({
                     {projDate && <span style={S.metaItem}><MapPin size={13} strokeWidth={2.2} /> Est. {projDate}</span>}
                     {goal.monthlyContribution > 0 && <span style={S.metaItem}><Wallet size={13} strokeWidth={2.2} /> {formatCurrency(goal.monthlyContribution, currency)}/mo</span>}
                     {goal.interestRate ? <span style={S.metaItem}><TrendingUp size={13} strokeWidth={2.2} /> {goal.interestRate}% p.a.</span> : null}
-                    {goal.lockedIn != null ? (
+                    {goal.lockedIn != null && !goal.lockYears ? (
                       <span style={S.metaItem}>{goal.lockedIn ? <Lock size={13} strokeWidth={2.2} /> : <Unlock size={13} strokeWidth={2.2} />} {goal.lockedIn ? 'Locked' : 'Flexible'}</span>
                     ) : null}
                     {goal.lockYears ? <span style={S.metaItem}><Lock size={13} strokeWidth={2.2} /> Locked {goal.lockYears} yrs</span> : null}

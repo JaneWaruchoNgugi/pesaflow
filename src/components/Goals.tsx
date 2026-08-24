@@ -19,6 +19,7 @@ interface GoalsProps {
   currency: string;
   maxGoals?: number;
   onUpgrade?: () => void;
+  onUpdate?: (id: string, patch: Partial<Omit<Goal, 'id' | 'createdAt'>>) => void;
 }
 
 export const Goals: React.FC<GoalsProps> = ({

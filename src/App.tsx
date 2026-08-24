@@ -386,6 +386,7 @@ const MainApp: React.FC = () => {
               onRemove={goals.removeGoal}
               onContribute={goals.contribute}
               onUpdateSaved={goals.updateSaved}
+              onUpdate={goals.updateGoal}
               currency={profile.currency}
               maxGoals={undefined}
               onUpgrade={() => setActiveView('upgrade')}

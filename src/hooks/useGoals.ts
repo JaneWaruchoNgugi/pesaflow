@@ -65,10 +65,13 @@ export const useGoals = () => {
     persist(goals.map((g) => g.id === id ? { ...g, completed: true, savedAmount: g.targetAmount } : g));
   }, [goals]);
 
+  const updateGoal = useCallback((id: string, patch: Partial<Omit<Goal, 'id' | 'createdAt'>>) =>
+    persist(goals.map((g) => g.id === id ? { ...g, ...patch, completed: (patch.savedAmount ?? g.savedAmount) >= (patch.targetAmount ?? g.targetAmount) } : g)), [goals]);
+
   const activeGoals    = goals.filter((g) => !g.completed);
   const completedGoals = goals.filter((g) => g.completed);
   const totalTargeted  = goals.reduce((s, g) => s + g.targetAmount, 0);
   const totalSaved     = goals.reduce((s, g) => s + g.savedAmount, 0);
 
-  return { goals, activeGoals, completedGoals, totalTargeted, totalSaved, addGoal, removeGoal, updateSaved, contribute, markComplete };
+  return { goals, activeGoals, completedGoals, totalTargeted, totalSaved, addGoal, removeGoal, updateSaved, contribute, markComplete, updateGoal };
 };

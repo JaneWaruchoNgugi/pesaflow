@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Lock, Unlock, Sparkles, Target, Trophy, Calendar, MapPin, Wallet, Check, AlertTriangle, X, TrendingUp, Users, Hash, Plus } from 'lucide-react';
+import { Lock, Unlock, Sparkles, Target, Trophy, Calendar, MapPin, Wallet, Check, AlertTriangle, X, TrendingUp, Users, Hash, Plus, Umbrella } from 'lucide-react';
 import type { Goal, GoalCategory, SaccoHolding, ChamaFrequency } from '../types';
-import { GOAL_META, getGoalProgress, getGoalDeadlineStatus, projectGoalDate, projectGoalInterest, computeChamaPlan } from '../hooks/goals';
+import { GOAL_META, getGoalProgress, getGoalDeadlineStatus, projectGoalDate, projectGoalInterest, computeChamaPlan, projectEndowment } from '../hooks/goals';
 import { formatCurrency } from '../utils/expenses';
 import { IconSelect } from './ui/IconSelect';
 import { Modal } from './ui/Modal';
@@ -24,7 +24,7 @@ interface GoalsProps {
 
 export const Goals: React.FC<GoalsProps> = ({
   goals, activeGoals, completedGoals, totalTargeted, totalSaved,
-  onAdd, onRemove, onContribute, currency, maxGoals, onUpgrade,
+  onAdd, onRemove, onContribute, currency, maxGoals, onUpgrade, onUpdate,
 }) => {
   const [name, setName]         = useState('');
   const [target, setTarget]     = useState('');
@@ -37,6 +37,10 @@ export const Goals: React.FC<GoalsProps> = ({
   const [saccoHolding, setSaccoHolding] = useState<SaccoHolding>('dividends');
   const [interestRate, setInterestRate] = useState('');
   const [lockedIn, setLockedIn] = useState(false);
+  const [lockYears, setLockYears] = useState('');
+  const [endowmentType, setEndowmentType] = useState<'regular' | 'anticipated'>('regular');
+  const [termYears, setTermYears] = useState('10');
+  const [payoutInterval, setPayoutInterval] = useState('5');
   const [chamaMembers, setChamaMembers] = useState('');
   const [chamaPosition, setChamaPosition] = useState('');
   const [chamaFrequency, setChamaFrequency] = useState<ChamaFrequency>('monthly');
@@ -44,18 +48,21 @@ export const Goals: React.FC<GoalsProps> = ({
   const [contributeId, setContributeId] = useState<string | null>(null);
   const [contributeAmt, setContributeAmt] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   // Savings-vehicle goals capture where the money sits (provider/SACCO/chama/insurer).
-  const VEHICLE_CATEGORIES: GoalCategory[] = ['mmf', 'sacco', 'chama', 'insurance'];
+  const VEHICLE_CATEGORIES: GoalCategory[] = ['mmf', 'sacco', 'chama', 'insurance', 'bankSavings'];
   const isVehicle = VEHICLE_CATEGORIES.includes(category);
-  // MMF & SACCO earn interest/dividends, so they get a rate + lock-in + growth projection.
-  const isInterestVehicle = category === 'mmf' || category === 'sacco';
+  // MMF, SACCO & bank savings earn interest/dividends, so they get a rate + lock-in + growth projection.
+  const isInterestVehicle = category === 'mmf' || category === 'sacco' || category === 'bankSavings';
   const isChama = category === 'chama';
+  const isEndowment = category === 'insurance';
   const institutionLabel =
     category === 'sacco' ? 'Which SACCO?'
     : category === 'chama' ? 'Which chama / group?'
     : category === 'mmf' ? 'MMF provider'
     : category === 'insurance' ? 'Insurer / cover name'
+    : category === 'bankSavings' ? 'Which bank?'
     : 'Provider';
 
   // Live projection preview for the form, before the goal is saved.
@@ -77,29 +84,67 @@ export const Goals: React.FC<GoalsProps> = ({
       } as Goal)
     : null;
 
-  const handleAdd = () => {
+  const resetForm = () => {
+    setName(''); setTarget(''); setSaved(''); setMonthly(''); setDeadline(''); setNotes(''); setInstitution('');
+    setInterestRate(''); setLockedIn(false); setLockYears('');
+    setEndowmentType('regular'); setTermYears('10'); setPayoutInterval('5');
+    setChamaMembers(''); setChamaPosition(''); setChamaContribution(''); setChamaFrequency('monthly');
+    setCategory('emergency'); setSaccoHolding('dividends');
+  };
+
+  const buildPayload = (): Omit<Goal, 'id' | 'createdAt' | 'completed'> => {
     const tgt = parseFloat(target.replace(/,/g, ''));
     const sav = parseFloat(saved.replace(/,/g, '') || '0');
     const mon = parseFloat(monthly.replace(/,/g, '') || '0');
     const rate = parseFloat(interestRate) || 0;
-    if (!name.trim() || isNaN(tgt) || tgt <= 0 || goalLimitReached) return;
-    onAdd({
-      name: name.trim(), targetAmount: tgt, savedAmount: sav, category, deadline, monthlyContribution: mon, notes,
+    const ly = parseInt(lockYears) || 0;
+    return {
+      name: name.trim(), targetAmount: tgt, savedAmount: sav, category,
+      deadline: isEndowment ? '' : deadline, monthlyContribution: mon, notes,
       ...(isVehicle && institution.trim() ? { institution: institution.trim() } : {}),
       ...(category === 'sacco' ? { saccoHolding } : {}),
       ...(isInterestVehicle && rate > 0 ? { interestRate: rate } : {}),
       ...(isInterestVehicle ? { lockedIn } : {}),
+      ...(isInterestVehicle && lockedIn && ly > 0 ? { lockYears: ly } : {}),
+      ...(isEndowment ? {
+        endowmentType,
+        termYears: parseInt(termYears) || 10,
+        interestRate: rate,
+        ...(endowmentType === 'anticipated' ? { payoutIntervalYears: parseInt(payoutInterval) || 5 } : {}),
+      } : {}),
       ...(isChama ? {
         chamaMembers: parseInt(chamaMembers) || 0,
         chamaContribution: parseFloat(chamaContribution.replace(/,/g, '')) || 0,
         chamaFrequency,
         ...(parseInt(chamaPosition) > 0 ? { chamaPosition: parseInt(chamaPosition) } : {}),
       } : {}),
-    });
-    setName(''); setTarget(''); setSaved(''); setMonthly(''); setDeadline(''); setNotes(''); setInstitution('');
-    setInterestRate(''); setLockedIn(false);
-    setChamaMembers(''); setChamaPosition(''); setChamaContribution(''); setChamaFrequency('monthly');
-    setShowForm(false);
+    };
+  };
+
+  const handleSave = () => {
+    const tgt = parseFloat(target.replace(/,/g, ''));
+    if (!name.trim() || isNaN(tgt) || tgt <= 0 || (goalLimitReached && !editId)) return;
+    const payload = buildPayload();
+    if (editId) onUpdate?.(editId, payload); else onAdd(payload);
+    resetForm(); setEditId(null); setShowForm(false);
+  };
+
+  const openEdit = (goal: Goal) => {
+    setEditId(goal.id);
+    setName(goal.name); setTarget(String(goal.targetAmount)); setSaved(String(goal.savedAmount));
+    setMonthly(String(goal.monthlyContribution || '')); setDeadline(goal.deadline || ''); setNotes(goal.notes || '');
+    setCategory(goal.category); setInstitution(goal.institution || '');
+    setInterestRate(goal.interestRate != null ? String(goal.interestRate) : '');
+    setLockedIn(!!goal.lockedIn); setLockYears(goal.lockYears != null ? String(goal.lockYears) : '');
+    setSaccoHolding(goal.saccoHolding || 'dividends');
+    setEndowmentType(goal.endowmentType || 'regular');
+    setTermYears(goal.termYears != null ? String(goal.termYears) : '10');
+    setPayoutInterval(goal.payoutIntervalYears != null ? String(goal.payoutIntervalYears) : '5');
+    setChamaMembers(goal.chamaMembers != null ? String(goal.chamaMembers) : '');
+    setChamaPosition(goal.chamaPosition != null ? String(goal.chamaPosition) : '');
+    setChamaContribution(goal.chamaContribution != null ? String(goal.chamaContribution) : '');
+    setChamaFrequency(goal.chamaFrequency || 'monthly');
+    setShowForm(true);
   };
 
   const handleContribute = (id: string) => {
@@ -151,14 +196,14 @@ export const Goals: React.FC<GoalsProps> = ({
       )}
 
       {/* Add trigger */}
-      <button style={S.addTriggerBtn} onClick={() => setShowForm(true)}>
+      <button style={S.addTriggerBtn} onClick={() => { resetForm(); setEditId(null); setShowForm(true); }}>
         <Plus size={18} strokeWidth={2.6} /> Add Investment
       </button>
 
-      {/* Add form modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Add Investment">
-        {goalLimitReached && <div style={{ marginBottom: 12 }}><span style={S.limitTag}><Lock size={12} /> Free plan limit</span></div>}
-        {goalLimitReached && (
+      {/* Add / Edit form modal */}
+      <Modal open={showForm} onClose={() => { setShowForm(false); setEditId(null); resetForm(); }} title={editId ? 'Edit Investment' : 'Add Investment'}>
+        {(goalLimitReached && !editId) && <div style={{ marginBottom: 12 }}><span style={S.limitTag}><Lock size={12} /> Free plan limit</span></div>}
+        {(goalLimitReached && !editId) && (
           <div style={S.upgradePrompt}>
             <div style={S.upgradeIcon}><Sparkles size={18} /></div>
             <div style={{ flex: 1 }}>
@@ -171,43 +216,79 @@ export const Goals: React.FC<GoalsProps> = ({
         <div className="goals-form-grid">
           <div style={S.field}>
             <label style={S.label}>Goal Name</label>
-            <input style={S.input} placeholder="e.g. Mombasa Vacation" value={name} onChange={(e) => setName(e.target.value)} disabled={goalLimitReached} />
+            <input style={S.input} placeholder="e.g. Mombasa Vacation" value={name} onChange={(e) => setName(e.target.value)} disabled={goalLimitReached && !editId} />
           </div>
           <div style={S.field}>
             <label style={S.label}>Category</label>
             <IconSelect
               value={category}
               onChange={(v) => setCategory(v)}
-              disabled={goalLimitReached}
+              disabled={goalLimitReached && !editId}
               options={(Object.entries(GOAL_META) as [GoalCategory, typeof GOAL_META[GoalCategory]][])
                 .map(([key, m]) => ({ value: key, label: m.label, icon: m.icon, color: m.color }))}
             />
           </div>
           <div style={S.field}>
             <label style={S.label}>Target Amount (KSh)</label>
-            <input style={S.input} type="number" placeholder="e.g. 150000" value={target} onChange={(e) => setTarget(e.target.value)} disabled={goalLimitReached} />
+            <input style={S.input} type="number" placeholder="e.g. 150000" value={target} onChange={(e) => setTarget(e.target.value)} disabled={goalLimitReached && !editId} />
           </div>
           <div style={S.field}>
             <label style={S.label}>Already Saved (KSh)</label>
-            <input style={S.input} type="number" placeholder="0" value={saved} onChange={(e) => setSaved(e.target.value)} disabled={goalLimitReached} />
+            <input style={S.input} type="number" placeholder="0" value={saved} onChange={(e) => setSaved(e.target.value)} disabled={goalLimitReached && !editId} />
           </div>
           <div style={S.field}>
             <label style={S.label}>Monthly Contribution (KSh)</label>
-            <input style={S.input} type="number" placeholder="e.g. 5000" value={monthly} onChange={(e) => setMonthly(e.target.value)} disabled={goalLimitReached} />
+            <input style={S.input} type="number" placeholder="e.g. 5000" value={monthly} onChange={(e) => setMonthly(e.target.value)} disabled={goalLimitReached && !editId} />
           </div>
-          <div style={S.field}>
-            <label style={S.label}>Deadline (optional)</label>
-            <input style={S.input} type="month" value={deadline} onChange={(e) => setDeadline(e.target.value)} disabled={goalLimitReached}
-              // style={{ ...S.input, colorScheme: 'dark' }}
-            />
-          </div>
+          {!isEndowment && (
+            <div style={S.field}>
+              <label style={S.label}>Deadline (optional)</label>
+              <input style={S.input} type="month" value={deadline} onChange={(e) => setDeadline(e.target.value)} disabled={goalLimitReached && !editId}
+                // style={{ ...S.input, colorScheme: 'dark' }}
+              />
+            </div>
+          )}
 
           {isVehicle && (
             <div style={S.field}>
               <label style={S.label}>{institutionLabel}</label>
-              <input style={S.input} placeholder={category === 'sacco' ? 'e.g. Stima, Mwalimu, Hazina' : category === 'mmf' ? 'e.g. Ziidi, CIC, Cytonn' : category === 'insurance' ? 'e.g. NHIF/SHA, Jubilee' : 'e.g. Office chama'}
-                value={institution} onChange={(e) => setInstitution(e.target.value)} disabled={goalLimitReached} />
+              <input style={S.input} placeholder={category === 'sacco' ? 'e.g. Stima, Mwalimu, Hazina' : category === 'mmf' ? 'e.g. Ziidi, CIC, Cytonn' : category === 'insurance' ? 'e.g. NHIF/SHA, Jubilee' : category === 'bankSavings' ? 'e.g. Equity, KCB, Co-op' : 'e.g. Office chama'}
+                value={institution} onChange={(e) => setInstitution(e.target.value)} disabled={goalLimitReached && !editId} />
             </div>
+          )}
+
+          {isEndowment && (
+            <>
+              <div style={S.field}>
+                <label style={S.label}>Endowment type</label>
+                <div style={S.holdingRow}>
+                  {(['regular', 'anticipated'] as const).map((t) => (
+                    <button key={t} type="button" onClick={() => setEndowmentType(t)}
+                      style={{ ...S.holdingBtn, ...(endowmentType === t ? S.holdingBtnActive : {}) }}>
+                      {t === 'regular' ? 'Regular' : 'Anticipated'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Term (years)</label>
+                <select style={S.select} value={termYears} onChange={(e) => setTermYears(e.target.value)}>
+                  {[10, 15, 20, 25, 30, 35].map((y) => <option key={y} value={y}>{y} years</option>)}
+                </select>
+              </div>
+              <div style={S.field}>
+                <label style={S.label}>Interest rate (% p.a.)</label>
+                <input style={S.input} type="number" min="0" step="0.1" placeholder="e.g. 8" value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
+              </div>
+              {endowmentType === 'anticipated' && (
+                <div style={S.field}>
+                  <label style={S.label}>Payout every (years)</label>
+                  <select style={S.select} value={payoutInterval} onChange={(e) => setPayoutInterval(e.target.value)}>
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((y) => <option key={y} value={y}>Every {y} years</option>)}
+                  </select>
+                </div>
+              )}
+            </>
           )}
 
           {category === 'sacco' && (
@@ -215,7 +296,7 @@ export const Goals: React.FC<GoalsProps> = ({
               <label style={S.label}>Held as</label>
               <div style={S.holdingRow}>
                 {(['dividends', 'shares'] as SaccoHolding[]).map((h) => (
-                  <button key={h} type="button" disabled={goalLimitReached}
+                  <button key={h} type="button" disabled={goalLimitReached && !editId}
                     onClick={() => setSaccoHolding(h)}
                     style={{ ...S.holdingBtn, ...(saccoHolding === h ? S.holdingBtnActive : {}) }}>
                     {h === 'dividends' ? 'Dividends' : 'Shares'}
@@ -229,7 +310,7 @@ export const Goals: React.FC<GoalsProps> = ({
             <div style={S.field}>
               <label style={S.label}>{category === 'sacco' ? 'Dividend rate (% p.a.)' : 'Interest rate (% p.a.)'}</label>
               <input style={S.input} type="number" min="0" step="0.1" placeholder="e.g. 10"
-                value={interestRate} onChange={(e) => setInterestRate(e.target.value)} disabled={goalLimitReached} />
+                value={interestRate} onChange={(e) => setInterestRate(e.target.value)} disabled={goalLimitReached && !editId} />
             </div>
           )}
 
@@ -237,15 +318,22 @@ export const Goals: React.FC<GoalsProps> = ({
             <div style={S.field}>
               <label style={S.label}>Locked in (fixed term)?</label>
               <div style={S.holdingRow}>
-                <button type="button" disabled={goalLimitReached} onClick={() => setLockedIn(true)}
+                <button type="button" disabled={goalLimitReached && !editId} onClick={() => setLockedIn(true)}
                   style={{ ...S.holdingBtn, ...(lockedIn ? S.holdingBtnActive : {}) }}>
                   <Lock size={13} /> Locked
                 </button>
-                <button type="button" disabled={goalLimitReached} onClick={() => setLockedIn(false)}
+                <button type="button" disabled={goalLimitReached && !editId} onClick={() => setLockedIn(false)}
                   style={{ ...S.holdingBtn, ...(!lockedIn ? S.holdingBtnActive : {}) }}>
                   <Unlock size={13} /> Flexible
                 </button>
               </div>
+            </div>
+          )}
+
+          {isInterestVehicle && lockedIn && (
+            <div style={S.field}>
+              <label style={S.label}>Lock duration (years)</label>
+              <input style={S.input} type="number" min="0" placeholder="e.g. 2" value={lockYears} onChange={(e) => setLockYears(e.target.value)} disabled={goalLimitReached && !editId} />
             </div>
           )}
 
@@ -254,18 +342,18 @@ export const Goals: React.FC<GoalsProps> = ({
               <div style={S.field}>
                 <label style={S.label}>Number of members</label>
                 <input style={S.input} type="number" min="1" placeholder="e.g. 12"
-                  value={chamaMembers} onChange={(e) => setChamaMembers(e.target.value)} disabled={goalLimitReached} />
+                  value={chamaMembers} onChange={(e) => setChamaMembers(e.target.value)} disabled={goalLimitReached && !editId} />
               </div>
               <div style={S.field}>
                 <label style={S.label}>Your payout position (1 = first)</label>
                 <input style={S.input} type="number" min="1" placeholder="e.g. 5"
-                  value={chamaPosition} onChange={(e) => setChamaPosition(e.target.value)} disabled={goalLimitReached} />
+                  value={chamaPosition} onChange={(e) => setChamaPosition(e.target.value)} disabled={goalLimitReached && !editId} />
               </div>
               <div style={S.field}>
                 <label style={S.label}>Contribution frequency</label>
                 <div style={S.holdingRow}>
                   {(['daily', 'weekly', 'monthly'] as ChamaFrequency[]).map((f) => (
-                    <button key={f} type="button" disabled={goalLimitReached}
+                    <button key={f} type="button" disabled={goalLimitReached && !editId}
                       onClick={() => setChamaFrequency(f)}
                       style={{ ...S.holdingBtn, ...(chamaFrequency === f ? S.holdingBtnActive : {}) }}>
                       {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -276,7 +364,7 @@ export const Goals: React.FC<GoalsProps> = ({
               <div style={S.field}>
                 <label style={S.label}>Contribution per member ({chamaFrequency}, KSh)</label>
                 <input style={S.input} type="number" min="0" placeholder="e.g. 1000"
-                  value={chamaContribution} onChange={(e) => setChamaContribution(e.target.value)} disabled={goalLimitReached} />
+                  value={chamaContribution} onChange={(e) => setChamaContribution(e.target.value)} disabled={goalLimitReached && !editId} />
               </div>
             </>
           )}
@@ -305,19 +393,43 @@ export const Goals: React.FC<GoalsProps> = ({
             <TrendingUp size={16} strokeWidth={2.2} style={{ color: 'var(--green)', flexShrink: 0 }} />
             {formProjection ? (
               <span>
-                By <strong style={{ color: 'var(--text-1)' }}>{deadline}</strong> ({formProjection.months} mo) you’d have about{' '}
+                By <strong style={{ color: 'var(--text-1)' }}>{deadline}</strong> ({formProjection.months} mo) you'd have about{' '}
                 <strong style={{ color: 'var(--green)' }}>{formatCurrency(formProjection.futureValue, currency)}</strong> —
-                that’s <strong style={{ color: 'var(--green)' }}>{formatCurrency(formProjection.interestEarned, currency)}</strong> earned in {category === 'sacco' ? 'dividends' : 'interest'}.
+                that's <strong style={{ color: 'var(--green)' }}>{formatCurrency(formProjection.interestEarned, currency)}</strong> earned in {category === 'sacco' ? 'dividends' : 'interest'}.
               </span>
             ) : (
               <span style={{ color: 'var(--text-3)' }}>Add a rate and a deadline to see projected {category === 'sacco' ? 'dividends' : 'interest'} earned.</span>
             )}
           </div>
         )}
+
+        {isEndowment && (() => {
+          const proj = projectEndowment({
+            category: 'insurance', endowmentType, termYears: parseInt(termYears) || 0,
+            interestRate: parseFloat(interestRate) || 0, savedAmount: parseFloat(saved.replace(/,/g, '') || '0'),
+            monthlyContribution: parseFloat(monthly.replace(/,/g, '') || '0'),
+            payoutIntervalYears: parseInt(payoutInterval) || 0,
+          } as Goal);
+          return (
+            <div style={S.projectionBox}>
+              <Umbrella size={16} strokeWidth={2.2} style={{ color: 'var(--green)', flexShrink: 0 }} />
+              {proj ? (
+                <span>
+                  Projected maturity <strong style={{ color: 'var(--green)' }}>{formatCurrency(proj.maturityValue, currency)}</strong>
+                  {' '}(+{formatCurrency(proj.interestEarned, currency)} interest).
+                  {proj.endowmentType === 'anticipated' && proj.totalPayouts > 1
+                    ? <> ≈ <strong style={{ color: 'var(--text-1)' }}>{proj.totalPayouts}</strong> payouts of <strong style={{ color: 'var(--green)' }}>{formatCurrency(proj.perPayout, currency)}</strong> — first around <strong style={{ color: 'var(--text-1)' }}>{proj.schedule[0].date}</strong>.</>
+                    : <> Paid at maturity ({proj.schedule[0].date}).</>}
+                </span>
+              ) : <span style={{ color: 'var(--text-3)' }}>Add a term and interest rate to project the endowment.</span>}
+            </div>
+          );
+        })()}
+
         <div style={S.formBottom}>
-          <input style={{ ...S.input, width: '100%', boxSizing: 'border-box' }} placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={goalLimitReached} />
-          <button style={{ ...S.addBtn, width: '100%', opacity: !name.trim() || !target || goalLimitReached ? 0.5 : 1 }} onClick={handleAdd} disabled={!name.trim() || !target || goalLimitReached}>
-            <Check size={15} strokeWidth={2.6} /> Save Investment
+          <input style={{ ...S.input, width: '100%', boxSizing: 'border-box' }} placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} disabled={goalLimitReached && !editId} />
+          <button style={{ ...S.addBtn, width: '100%', opacity: !name.trim() || !target || (goalLimitReached && !editId) ? 0.5 : 1 }} onClick={handleSave} disabled={!name.trim() || !target || (goalLimitReached && !editId)}>
+            <Check size={15} strokeWidth={2.6} /> Save {editId ? 'Changes' : 'Investment'}
           </button>
         </div>
       </Modal>
@@ -388,6 +500,8 @@ export const Goals: React.FC<GoalsProps> = ({
                     {goal.lockedIn != null ? (
                       <span style={S.metaItem}>{goal.lockedIn ? <Lock size={13} strokeWidth={2.2} /> : <Unlock size={13} strokeWidth={2.2} />} {goal.lockedIn ? 'Locked' : 'Flexible'}</span>
                     ) : null}
+                    {goal.lockYears ? <span style={S.metaItem}><Lock size={13} strokeWidth={2.2} /> Locked {goal.lockYears} yrs</span> : null}
+                    {goal.termYears ? <span style={S.metaItem}><Calendar size={13} strokeWidth={2.2} /> {goal.termYears}-yr term</span> : null}
                     {chamaPlan ? <span style={S.metaItem}><Users size={13} strokeWidth={2.2} /> {chamaPlan.members} members</span> : null}
                     {chamaPlan?.position ? <span style={S.metaItem}><Hash size={13} strokeWidth={2.2} /> #{chamaPlan.position}</span> : null}
                   </div>
@@ -414,6 +528,16 @@ export const Goals: React.FC<GoalsProps> = ({
                     </div>
                   )}
 
+                  {(() => { const ep = projectEndowment(goal); return ep ? (
+                    <div style={{ ...S.projectionBox, margin: 0 }}>
+                      <Umbrella size={15} strokeWidth={2.2} style={{ color: 'var(--green)', flexShrink: 0 }} />
+                      <span>
+                        Maturity <strong style={{ color: 'var(--green)' }}>{formatCurrency(ep.maturityValue, currency)}</strong> in {ep.termYears} yrs
+                        {ep.endowmentType === 'anticipated' && ep.totalPayouts > 1 ? <> · {ep.totalPayouts} payouts of <strong style={{ color: 'var(--green)' }}>{formatCurrency(ep.perPayout, currency)}</strong></> : ''}
+                      </span>
+                    </div>
+                  ) : null; })()}
+
                   {/* Contribute panel */}
                   {contributeId === goal.id ? (
                     <div style={S.contributeRow}>
@@ -428,6 +552,7 @@ export const Goals: React.FC<GoalsProps> = ({
                   ) : (
                     <div style={S.goalActions}>
                       <button style={S.contributeBtn} onClick={() => setContributeId(goal.id)}>+ Contribute</button>
+                      <button style={S.editBtn} onClick={() => openEdit(goal)}>Edit</button>
                       <button style={S.removeBtn} onClick={() => onRemove(goal.id)}>Remove</button>
                     </div>
                   )}
@@ -534,6 +659,7 @@ const S: Record<string, React.CSSProperties> = {
   cancelBtn: { padding: '8px 10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-3)', borderRadius: 7, fontSize: 13 },
   goalActions: { display: 'flex', gap: 8 },
   contributeBtn: { flex: 1, padding: '9px 0', background: 'var(--gold-dim)', border: '1px solid var(--border-acc)', color: 'var(--gold)', borderRadius: 8, fontWeight: 600, fontSize: 13 },
+  editBtn: { padding: '9px 14px', background: 'transparent', border: '1px solid var(--border-acc)', color: 'var(--gold)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'Karla, sans-serif' },
   removeBtn: { padding: '9px 14px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-3)', borderRadius: 8, fontSize: 13 },
   completedList: { display: 'flex', flexDirection: 'column', gap: 8 },
   completedItem: { display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--green-dim)', border: '1px solid var(--green-b)', borderRadius: 10 },

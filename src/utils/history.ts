@@ -53,7 +53,7 @@ export const monthlyHistory = (
     points.push({
       month,
       spent: b.totalExpenses,
-      saved: Math.max(0, income - b.totalExpenses),
+      saved: b.savingsLeft,
       necessary: b.necessaryTotal,
       unnecessary: b.unnecessaryTotal,
     });

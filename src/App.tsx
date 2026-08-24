@@ -114,8 +114,8 @@ const MainApp: React.FC = () => {
   const habits  = useHabits();
 
   const {
-    monthlyExpenses, profile, breakdown, insight, warnings,
-    addExpense, removeExpense, updateExpense, updateProfile,
+    expenses, monthlyExpenses, profile, breakdown, insight, warnings, history, goalsThisMonth,
+    selectedMonth, setSelectedMonth, addExpense, removeExpense, updateExpense, updateProfile,
   } = useExpenses(bills.monthlyTotal, goals.goals);
 
   const {
@@ -318,6 +318,11 @@ const MainApp: React.FC = () => {
               userTier={userTier}
               expenseCount={monthlyExpenses.length}
               onUpgrade={() => setActiveView('upgrade')}
+              expenses={expenses}
+              history={history}
+              selectedMonth={selectedMonth}
+              onSelectMonth={setSelectedMonth}
+              goalsThisMonth={goalsThisMonth}
             />
           )}
 

@@ -2,6 +2,9 @@ import React, {type Dispatch, type SetStateAction, useState} from 'react';
 import { AlertTriangle, ArrowDown, ArrowRight, ArrowUp, ChevronRight, Crown, Landmark, Lock, Pencil, ReceiptText, Shield, Sparkles, Target, Trophy, TrendingUp, Wallet } from 'lucide-react';
 import type {MonthlyBreakdown, SpendingInsight, FinancialProfile, Bill, Goal, Habit, AppView, SubscriptionTier} from '../types';
 import { formatCurrency, CATEGORY_META } from '../utils/expenses';
+import { MonthSelector } from './MonthSelector';
+import type { MonthPoint } from '../utils/history';
+import { availableMonths } from '../utils/history';
 import { HabitsTracker } from './HabitsTracker';
 
 interface DashboardProps {
@@ -28,6 +31,11 @@ interface DashboardProps {
   userTier?: SubscriptionTier;
   expenseCount?: number;
   onUpgrade?: (tier: SubscriptionTier) => void;
+  expenses?: import('../types').Expense[];
+  history?: MonthPoint[];
+  selectedMonth?: string;
+  onSelectMonth?: (month: string) => void;
+  goalsThisMonth?: number;
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -46,6 +54,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   efCurrent = 0, efTarget = 0, efProgressPct = 0,
   onToggleHabit, onAddHabit, onRemoveHabit, onNavigate,
   userTier = 'free', expenseCount = 0, onUpgrade,
+  expenses = [], history = [], selectedMonth = '', onSelectMonth,
+  goalsThisMonth = 0,
 }) => {
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeInput, setIncomeInput] = useState(String(profile.monthlyIncome));
@@ -80,6 +90,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         .dash-action-card:hover .dash-open-chip { color: var(--gold); background: var(--gold-dim); border-color: var(--border-acc); }
         .dash-action-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
       `}</style>
+
+      {onSelectMonth && selectedMonth && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <MonthSelector months={availableMonths(expenses, selectedMonth)} value={selectedMonth} onChange={onSelectMonth} />
+        </div>
+      )}
 
       {/* Setup banner */}
       {profile.monthlyIncome === 0 && (
@@ -121,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div style={S.progressBar}>
             <div style={{ ...S.progressFill, width: `${spendingPct}%`, background: spendingPct > 80 ? 'var(--red)' : 'var(--blue)' }} />
           </div>
-          <div style={S.statSub}>{spendingPct}% of income</div>
+          <div style={S.statSub}>{spendingPct}% of income · expenses + bills + goals</div>
         </div>
 
         {/* Unnecessary */}
@@ -147,6 +163,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ? `${Math.round((breakdown.savingsLeft / profile.monthlyIncome) * 100)}% remaining`
               : profile.monthlyIncome > 0 ? 'Overspent!' : '—'}
           </div>
+          {goalsThisMonth > 0 && (
+            <div style={{ ...S.statSub, color: 'var(--green)' }}>
+              +{formatCurrency(goalsThisMonth, profile.currency)} saved to goals this month
+            </div>
+          )}
         </div>
       </div>
 
@@ -176,6 +197,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {history.length > 0 && (() => {
+        const maxVal = Math.max(1, ...history.map((h) => Math.max(h.spent, h.saved)));
+        return (
+          <div style={S.categoriesCard}>
+            <div style={S.cardTitle}>Spending over time</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: 140, padding: '8px 4px 0' }}>
+              {history.map((h) => (
+                <div key={h.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 100, width: '100%', justifyContent: 'center' }}>
+                    <div title={`Spent ${formatCurrency(h.spent, profile.currency)}`}
+                      style={{ width: 12, height: `${(h.spent / maxVal) * 100}%`, background: 'var(--blue)', borderRadius: '3px 3px 0 0' }} />
+                    <div title={`Saved ${formatCurrency(h.saved, profile.currency)}`}
+                      style={{ width: 12, height: `${(h.saved / maxVal) * 100}%`, background: 'var(--green)', borderRadius: '3px 3px 0 0' }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{h.month.slice(5)}/{h.month.slice(2, 4)}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 11, color: 'var(--text-3)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: 'var(--blue)' }} /> Spent</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 9, height: 9, borderRadius: 2, background: 'var(--green)' }} /> Saved</span>
+              <span style={{ marginLeft: 'auto', fontStyle: 'italic' }}>Bills use current projection</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Score + categories */}
       <div className="mid-row">

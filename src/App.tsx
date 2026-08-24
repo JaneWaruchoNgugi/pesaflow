@@ -14,7 +14,9 @@ import { useAlerts }        from './hooks/useAlerts';
 
 import { Header, ThemeProvider } from './components/Header';
 import { Dashboard }        from './components/Dashboard';
-import { ExpenseForm, ExpenseList } from './components/ExpenseManager';
+import { ExpenseForm, ExpenseList, ExpenseSummary } from './components/ExpenseManager';
+import { MonthSelector } from './components/MonthSelector';
+import { availableMonths } from './utils/history';
 import { Insights }         from './components/Insights';
 import { Advisor }          from './components/Advisor';
 import {
@@ -329,11 +331,13 @@ const MainApp: React.FC = () => {
           {/* ── Expenses ────────────────────────────────────────── */}
           {activeView === 'expenses' && (
             <div className="animate-in">
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <MonthSelector months={availableMonths(expenses, selectedMonth)} value={selectedMonth} onChange={setSelectedMonth} />
                 <button style={exportBtnStyle} onClick={() => exportExpensesToCSV(monthlyExpenses)}>
                   <Download size={14} strokeWidth={2.2} /> Export CSV
                 </button>
               </div>
+              <ExpenseSummary breakdown={breakdown} count={monthlyExpenses.length} currency={profile.currency} />
               <ExpenseForm onAdd={addExpense} />
               <ExpenseList expenses={monthlyExpenses} onRemove={removeExpense} onUpdate={updateExpense} currency={profile.currency} />
             </div>

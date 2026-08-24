@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Check, AlertTriangle, Repeat, X, Pencil, Plus } from 'lucide-react';
-import type { Expense, ExpenseCategory, ExpenseFrequency } from '../types';
+import type { Expense, ExpenseCategory, ExpenseFrequency, MonthlyBreakdown } from '../types';
+import { categoryBreakdown } from '../utils/history';
 import { CATEGORY_META, formatCurrency } from '../utils/expenses';
 import { readProfileDailyMultiplier } from '../utils/frequency';
 import { IconSelect } from './ui/IconSelect';
@@ -323,4 +324,51 @@ const S: Record<string, React.CSSProperties> = {
   editActions: { display: 'flex', gap: 8, marginTop: 2 },
   saveBtn: { flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 16px', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', border: 'none', borderRadius: 9, fontWeight: 700, fontSize: 14, fontFamily: 'Karla, sans-serif', cursor: 'pointer' },
   cancelBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 16px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: 9, fontSize: 14, fontWeight: 600, fontFamily: 'Karla, sans-serif', cursor: 'pointer' },
+};
+
+interface ExpenseSummaryProps {
+  breakdown: MonthlyBreakdown;
+  count: number;
+  currency: string;
+}
+
+export const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({ breakdown, count, currency }) => {
+  const rows = categoryBreakdown(breakdown);
+  const total = breakdown.totalExpenses;
+  const necPct = total > 0 ? Math.round((breakdown.necessaryTotal / total) * 100) : 0;
+  return (
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>This month · {count} {count === 1 ? 'entry' : 'entries'}</span>
+        <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, fontWeight: 700, color: 'var(--text-1)' }}>{formatCurrency(total, currency)}</span>
+      </div>
+      <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
+        <div style={{ width: `${necPct}%`, background: 'var(--green)' }} />
+        <div style={{ width: `${100 - necPct}%`, background: 'var(--amber)' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 6, color: 'var(--text-3)' }}>
+        <span style={{ color: 'var(--green)' }}>Necessary {formatCurrency(breakdown.necessaryTotal, currency)}</span>
+        <span style={{ color: 'var(--amber)' }}>Unnecessary {formatCurrency(breakdown.unnecessaryTotal, currency)}</span>
+      </div>
+      {rows.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          {rows.map(({ category, amount }) => {
+            const meta = CATEGORY_META[category];
+            const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
+            const Icon = meta?.icon;
+            return (
+              <div key={category} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {Icon && <Icon size={18} strokeWidth={2.1} style={{ color: meta.color, flexShrink: 0 }} />}
+                <span style={{ fontSize: 13, color: 'var(--text-1)', minWidth: 90 }}>{meta?.label}</span>
+                <div style={{ flex: 1, height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: meta?.color }} />
+                </div>
+                <span style={{ fontSize: 13, color: 'var(--text-2)', minWidth: 80, textAlign: 'right' }}>{formatCurrency(amount, currency)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 };

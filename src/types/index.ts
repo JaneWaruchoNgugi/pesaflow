@@ -219,6 +219,22 @@ export interface NetWorthItem {
   notes: string;
 }
 
+export interface LoanPayment { id: string; amount: number; date: string; } // date = YYYY-MM-DD
+
+export interface Loan {
+  id: string;
+  name: string;
+  category: LiabilityCategory;
+  principal: number;
+  currentBalance: number;
+  interestRate?: number;   // % p.a.
+  monthlyPayment?: number;
+  payments?: LoanPayment[];
+  notes?: string;
+  createdAt: string;
+  isDemo?: boolean;
+}
+
 export interface AssetCategoryMeta {
   label: string;
   icon: LucideIcon;

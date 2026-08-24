@@ -114,9 +114,9 @@ const MainApp: React.FC = () => {
   const habits  = useHabits();
 
   const {
-    monthlyExpenses, profile, breakdown, insight,
-    warnings, addExpense, removeExpense, updateExpense, updateProfile,
-  } = useExpenses(bills.monthlyTotal, goals.totalSaved);
+    monthlyExpenses, profile, breakdown, insight, warnings,
+    addExpense, removeExpense, updateExpense, updateProfile,
+  } = useExpenses(bills.monthlyTotal, goals.goals);
 
   const {
     investments, summary: investmentSummary,

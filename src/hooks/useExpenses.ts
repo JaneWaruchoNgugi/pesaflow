@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import type { Expense, FinancialProfile } from '../types';
+import type { Expense, FinancialProfile, Goal } from '../types';
 import { generateId, getCurrentMonth, filterByMonth } from '../utils/expenses';
 import { calculateMonthlyBreakdown, getSpendingInsight, getUnnecessaryWarnings } from '../utils/calculations';
+import { goalContributionsInMonth, monthlyHistory } from '../utils/history';
 import { getDailyMultiplier } from '../utils/frequency';
 import { syncCollection, syncDoc, deleteFromCollection } from '../lib/sync';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
@@ -25,7 +26,7 @@ const getUid = (): string | null => {
   } catch { return null; }
 };
 
-export const useExpenses = (billsTotal = 0, goalsTotal = 0) => {
+export const useExpenses = (billsTotal = 0, goals: Goal[] = []) => {
   const [expenses, setExpenses] = useState<Expense[]>(loadExpenses);
   const [profile, setProfile] = useState<FinancialProfile>(loadProfile);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
@@ -107,9 +108,11 @@ export const useExpenses = (billsTotal = 0, goalsTotal = 0) => {
 
   const monthlyExpenses = useMemo(() => filterByMonth(expenses, selectedMonth), [expenses, selectedMonth]);
   const dailyMultiplier = useMemo(() => getDailyMultiplier(profile), [profile]);
-  const breakdown = useMemo(() => calculateMonthlyBreakdown(monthlyExpenses, profile.monthlyIncome, billsTotal, goalsTotal, dailyMultiplier), [monthlyExpenses, profile.monthlyIncome, billsTotal, goalsTotal, dailyMultiplier]);
+  const goalsThisMonth = useMemo(() => goalContributionsInMonth(goals, selectedMonth), [goals, selectedMonth]);
+  const breakdown = useMemo(() => calculateMonthlyBreakdown(monthlyExpenses, profile.monthlyIncome, billsTotal, goalsThisMonth, dailyMultiplier), [monthlyExpenses, profile.monthlyIncome, billsTotal, goalsThisMonth, dailyMultiplier]);
   const insight = useMemo(() => getSpendingInsight(breakdown, profile.monthlyIncome), [breakdown, profile.monthlyIncome]);
   const warnings = useMemo(() => getUnnecessaryWarnings(monthlyExpenses, profile.monthlyIncome), [monthlyExpenses, profile.monthlyIncome]);
+  const history = useMemo(() => monthlyHistory(expenses, goals, billsTotal, profile.monthlyIncome, dailyMultiplier, 6, selectedMonth), [expenses, goals, billsTotal, profile.monthlyIncome, dailyMultiplier, selectedMonth]);
 
-  return { expenses, monthlyExpenses, profile, selectedMonth, setSelectedMonth, breakdown, insight, warnings, addExpense, removeExpense, updateExpense, updateProfile };
+  return { expenses, monthlyExpenses, profile, selectedMonth, setSelectedMonth, breakdown, insight, warnings, history, goalsThisMonth, addExpense, removeExpense, updateExpense, updateProfile };
 };

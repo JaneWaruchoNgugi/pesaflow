@@ -30,4 +30,25 @@ describe('mdToHtml', () => {
     expect(html).toContain('<th>A</th>');
     expect(html).toContain('<td>1</td>');
   });
+  it('escapes double quotes to prevent attribute breakout', () => {
+    expect(mdToHtml('say "hi"')).toContain('&quot;hi&quot;');
+  });
+  it('neutralizes onmouseover breakout in a link url', () => {
+    const html = mdToHtml('[x](https://safe.com" onmouseover="alert(1))');
+    expect(html).not.toContain('onmouseover="alert(1)"');
+    expect(html).toContain('&quot;');
+  });
+  it('neutralizes onerror breakout in an image url', () => {
+    const html = mdToHtml('![a](https://x.com" onerror="alert(1))');
+    expect(html).not.toContain('onerror="alert(1)"');
+  });
+  it('drops javascript: urls to #', () => {
+    const html = mdToHtml('[x](javascript:alert%281%29)');
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('href="#"');
+  });
+  it('still allows normal https links', () => {
+    expect(mdToHtml('[MMF](https://x.com)'))
+      .toContain('<a href="https://x.com" target="_blank" rel="noopener noreferrer">MMF</a>');
+  });
 });

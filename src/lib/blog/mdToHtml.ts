@@ -1,11 +1,18 @@
 const escapeHtml = (s: string): string =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+// Allow only safe URL schemes in links/images; anything else (javascript:, data:,
+// vbscript:, …) collapses to '#'. Checked after escapeHtml, so compare loosely.
+const SAFE_URL = /^(https?:\/\/|\/|#|mailto:)/i;
+const safeUrl = (u: string): string => (SAFE_URL.test(u.trim()) ? u : '#');
 
 const inline = (s: string): string =>
   escapeHtml(s)
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m: string, alt: string, url: string) =>
+      `<img src="${safeUrl(url)}" alt="${alt}" loading="lazy" />`)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m: string, text: string, url: string) =>
+      `<a href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${text}</a>`)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>');

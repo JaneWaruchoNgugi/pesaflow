@@ -1,18 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useReducer } from 'react';
 import type { Article } from '../types';
 import { fetchArticle } from '../lib/blog/articlesRepo';
 
+type State = { article: Article | null; loading: boolean };
+type Action =
+  | { type: 'fetch' }
+  | { type: 'done'; article: Article | null };
+
+function reducer(_: State, action: Action): State {
+  if (action.type === 'fetch') return { article: null, loading: true };
+  return { article: action.article, loading: false };
+}
+
 export const useArticle = (slug: string | undefined) => {
-  const [article, setArticle] = useState<Article | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, dispatch] = useReducer(reducer, {
+    article: null,
+    loading: slug !== undefined,
+  });
+
   useEffect(() => {
-    if (!slug) { setLoading(false); return; }
+    if (!slug) return;
     let alive = true;
-    setLoading(true);
+    dispatch({ type: 'fetch' });
     fetchArticle(slug)
-      .then(a => { if (alive) setArticle(a); })
-      .finally(() => { if (alive) setLoading(false); });
+      .then(a => { if (alive) dispatch({ type: 'done', article: a }); })
+      .catch(() => { if (alive) dispatch({ type: 'done', article: null }); });
     return () => { alive = false; };
   }, [slug]);
-  return { article, loading };
+
+  return { article: state.article, loading: state.loading };
 };

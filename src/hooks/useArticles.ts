@@ -23,8 +23,15 @@ export const useArticles = (categoryId?: string) => {
     }
   }, [cursor, categoryId]);
 
-  // Reset when the category changes.
-  useEffect(() => { setArticles([]); setCursor(null); setHasMore(true); load(true); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [categoryId]);
+  // Reset when the category changes. `load` is intentionally excluded from the deps
+  // below to avoid a reset loop (it changes identity whenever the cursor advances).
+  useEffect(() => {
+    setArticles([]);
+    setCursor(null);
+    setHasMore(true);
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId]);
 
   const loadMore = useCallback(() => { if (hasMore && !loading) load(false); }, [hasMore, loading, load]);
 

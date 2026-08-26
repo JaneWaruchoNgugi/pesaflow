@@ -344,3 +344,61 @@ export interface AlertLog {
   timestamp: string;
   snapshot: string; // serialized financial summary at time of alert
 }
+
+// ─── Blog / Financial Learning Hub ─────────────────────────
+
+export type ArticleStatus = 'draft' | 'scheduled' | 'published';
+
+export interface ArticleSEO {
+  metaTitle: string;
+  metaDescription: string;
+  ogImageUrl: string;
+  canonicalUrl?: string;
+}
+
+export interface ArticleCounts {
+  likes: number;
+  comments: number;
+  views: number;
+}
+
+export interface Article {
+  slug: string;                 // == Firestore doc id
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  categoryId: string;
+  authorName: string;
+  authorAvatarUrl: string;
+  bodyMarkdown: string;
+  status: ArticleStatus;
+  featured: boolean;
+  readMinutes: number;
+  publishedAt: string | null;   // ISO string
+  scheduledFor: string | null;  // ISO string
+  createdAt: string;            // ISO string
+  updatedAt: string;            // ISO string
+  seo: ArticleSEO;
+  counts: ArticleCounts;
+}
+
+export interface Category {
+  id: string;                   // == Firestore doc id, e.g. "mmfs"
+  name: string;
+  slug: string;
+  description: string;
+  order: number;
+  colorToken: string;           // CSS var name, e.g. "--gold"
+}
+
+// Parsed article body: an ordered list of markdown blocks and shortcodes.
+export type ContentSegment =
+  | { kind: 'markdown'; text: string }
+  | { kind: 'shortcode'; name: string; attrs: Record<string, string> };
+
+// One page of the paginated feed. `cursor` is opaque (a Firestore doc id) used to
+// fetch the next page; null when there are no more pages.
+export interface BlogFeedPage {
+  articles: Article[];
+  cursor: string | null;
+}

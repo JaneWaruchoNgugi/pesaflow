@@ -1,9 +1,23 @@
 import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '../Header';
+import { BlogTopBar } from './parts/BlogTopBar';
+import { BlogHome } from './BlogHome';
+import { ArticlePage } from './ArticlePage';
+import { CategoryPage } from './CategoryPage';
 
-// Placeholder — replaced with real routes in Task 14.
+// Public Financial Learning Hub. Rendered outside AuthGate (see main.tsx) so logged-out
+// visitors and crawlers can read. ThemeProvider gives blog pages the same light/dark theme.
 export const BlogApp: React.FC = () => (
-  <div style={{ padding: 40, fontFamily: 'DM Sans, sans-serif' }}>
-    <h1 style={{ fontFamily: 'Cormorant Garamond, serif' }}>Financial Learning Hub</h1>
-    <p>Coming together…</p>
-  </div>
+  <ThemeProvider>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
+      <BlogTopBar />
+      <Routes>
+        <Route index element={<BlogHome />} />
+        <Route path="category/:categorySlug" element={<CategoryPage />} />
+        <Route path=":slug" element={<ArticlePage />} />
+        <Route path="*" element={<Navigate to="/blog" replace />} />
+      </Routes>
+    </div>
+  </ThemeProvider>
 );

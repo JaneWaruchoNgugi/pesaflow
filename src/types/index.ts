@@ -122,7 +122,7 @@ export interface InvestmentSummary {
 export type GoalCategory =
     | 'emergency' | 'vacation' | 'education' | 'property'
     | 'car' | 'business' | 'retirement' | 'wedding'
-    | 'mmf' | 'sacco' | 'chama' | 'insurance' | 'other';
+    | 'mmf' | 'sacco' | 'chama' | 'insurance' | 'bankSavings' | 'other';
 
 /** For SACCO savings: whether the balance is held as dividend-earning deposits or share capital. */
 export type SaccoHolding = 'dividends' | 'shares';
@@ -149,6 +149,14 @@ export interface Goal {
   interestRate?: number;
   /** Whether the savings are locked in (fixed term) rather than freely withdrawable. */
   lockedIn?: boolean;
+  /** Lock duration in years (for locked-in interest vehicles). */
+  lockYears?: number;
+  /** Endowment sub-type for insurance-category goals. */
+  endowmentType?: 'regular' | 'anticipated';
+  /** Endowment term in years (10|15|20|25|30|35). */
+  termYears?: number;
+  /** Anticipated endowment: payout interval in years (2–10). */
+  payoutIntervalYears?: number;
   /** Chama: total members in the group. */
   chamaMembers?: number;
   /** Chama: this member's payout position in the rotation (1 = receives first). */
@@ -335,4 +343,62 @@ export interface AlertLog {
   channel: 'email' | 'whatsapp' | 'phone';
   timestamp: string;
   snapshot: string; // serialized financial summary at time of alert
+}
+
+// ─── Blog / Financial Learning Hub ─────────────────────────
+
+export type ArticleStatus = 'draft' | 'scheduled' | 'published';
+
+export interface ArticleSEO {
+  metaTitle: string;
+  metaDescription: string;
+  ogImageUrl: string;
+  canonicalUrl?: string;
+}
+
+export interface ArticleCounts {
+  likes: number;
+  comments: number;
+  views: number;
+}
+
+export interface Article {
+  slug: string;                 // == Firestore doc id
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  categoryId: string;
+  authorName: string;
+  authorAvatarUrl: string;
+  bodyMarkdown: string;
+  status: ArticleStatus;
+  featured: boolean;
+  readMinutes: number;
+  publishedAt: string | null;   // ISO string
+  scheduledFor: string | null;  // ISO string
+  createdAt: string;            // ISO string
+  updatedAt: string;            // ISO string
+  seo: ArticleSEO;
+  counts: ArticleCounts;
+}
+
+export interface Category {
+  id: string;                   // == Firestore doc id, e.g. "mmfs"
+  name: string;
+  slug: string;
+  description: string;
+  order: number;
+  colorToken: string;           // CSS var name, e.g. "--gold"
+}
+
+// Parsed article body: an ordered list of markdown blocks and shortcodes.
+export type ContentSegment =
+  | { kind: 'markdown'; text: string }
+  | { kind: 'shortcode'; name: string; attrs: Record<string, string> };
+
+// One page of the paginated feed. `cursor` is opaque (a Firestore doc id) used to
+// fetch the next page; null when there are no more pages.
+export interface BlogFeedPage {
+  articles: Article[];
+  cursor: string | null;
 }

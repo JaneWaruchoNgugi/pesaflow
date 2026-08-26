@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Blog images — publicly readable (shown on the public /blog), admin-only writes.
+    // Uploads come from the admin app (adminStorage), whose token carries admin == true.
+    // Size/type are validated client-side (uploadImage.ts); the rule mirrors the
+    // proven-working Firestore admin condition to avoid any extra failure surface.
+    match /blog/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Everything else: denied by default (no other Storage paths are used).
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

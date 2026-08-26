@@ -180,6 +180,7 @@ input,select,textarea { font-family:'DM Sans',sans-serif; outline:none; font-siz
 @keyframes popIn { from{opacity:0;transform:scale(0.93) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
 @keyframes pulse-ring { 0%{transform:scale(1);opacity:.6} 100%{transform:scale(1.5);opacity:0} }
 @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes dropDown { from{opacity:0;transform:translate(-50%,-120%)} to{opacity:1;transform:translate(-50%,0)} }
 
 /* ═══════════════════════════════════════════════
    CARDS
@@ -415,3 +416,20 @@ img,svg,video,canvas{max-width:100%}
     right: 14px !important;
   }
 }
+
+/* Blog article body — spacing for mdToHtml output */
+.blog-md h2 { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:700; margin:26px 0 8px; }
+.blog-md h3 { font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:700; margin:22px 0 6px; }
+.blog-md p { margin:14px 0; }
+.blog-md ul,.blog-md ol { margin:14px 0; padding-left:22px; }
+.blog-md li { margin:6px 0; }
+.blog-md blockquote { border-left:3px solid var(--gold); background:var(--gold-dim); padding:10px 16px; border-radius:0 8px 8px 0; margin:16px 0; font-style:italic; }
+.blog-md a { color:var(--gold); text-decoration:underline; }
+.blog-md img { max-width:100%; border-radius:10px; margin:14px 0; }
+.blog-md pre { background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; overflow-x:auto; font-size:.875em; margin:16px 0; }
+.blog-md pre code { background:none; border:none; padding:0; }
+.blog-md code { background:var(--bg-surface); border:1px solid var(--border); border-radius:5px; padding:1px 5px; font-size:.9em; }
+.blog-md table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
+.blog-md th,.blog-md td { border:1px solid var(--border); padding:8px 11px; text-align:left; }
+.blog-md th { background:var(--bg-surface); font-weight:700; }
+.blog-md hr { border:none; border-top:1px solid var(--border); margin:24px 0; }

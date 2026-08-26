@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 
 // authDomain is the standard Firebase value (finwise-948c8.firebaseapp.com). Google
 // sign-in uses signInWithPopup (see useAuth.ts), which completes via postMessage from
@@ -34,6 +35,9 @@ export const adminApp       = initializeApp(firebaseConfig, 'admin');
 export const adminAuth      = getAuth(adminApp);
 export const adminDb        = getFirestore(adminApp);
 export const adminFunctions = getFunctions(adminApp, 'us-central1');
+// Storage on the admin app so blog image uploads carry the admin token (Storage rules
+// gate blog/** writes on request.auth.token.admin == true).
+export const adminStorage   = getStorage(adminApp);
 
 // Resolves once Firebase Auth has restored (or confirmed absent) the session, so
 // Firestore reads/writes carry the auth token once per-user rules are enforced.

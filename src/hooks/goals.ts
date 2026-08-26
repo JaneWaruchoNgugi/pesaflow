@@ -1,7 +1,7 @@
 import type { GoalCategory, GoalCategoryMeta, Goal } from '../types';
 import {
   ShieldAlert, Plane, GraduationCap, Home, Car, Briefcase, Palmtree,
-  Gem, TrendingUp, Landmark, Users, Umbrella, Target,
+  Gem, TrendingUp, Landmark, Users, Umbrella, Building2, Target,
 } from 'lucide-react';
 
 export const GOAL_META: Record<GoalCategory, GoalCategoryMeta> = {
@@ -16,8 +16,9 @@ export const GOAL_META: Record<GoalCategory, GoalCategoryMeta> = {
   mmf:       { label: 'Money Market Fund', icon: TrendingUp, color: '#22C55E', description: 'MMF savings (e.g. Ziidi, CIC, Cytonn)' },
   sacco:     { label: 'SACCO Savings',  icon: Landmark, color: '#0EA5E9', description: 'SACCO deposits — dividends or shares' },
   chama:     { label: 'Chama Savings',  icon: Users, color: '#F59E0B', description: 'Group / merry-go-round savings' },
-  insurance: { label: 'Insurance Cover', icon: Umbrella, color: '#8B5CF6', description: 'Health, life or other cover' },
-  other:     { label: 'Other',          icon: Target, color: '#C9A84C', description: 'Custom savings goal' },
+  insurance:   { label: 'Insurance Cover', icon: Umbrella, color: '#8B5CF6', description: 'Health, life or other cover' },
+  bankSavings: { label: 'Bank Savings', icon: Building2, color: '#38BDF8', description: 'Bank account / fixed deposit' },
+  other:       { label: 'Other',          icon: Target, color: '#C9A84C', description: 'Custom savings goal' },
 };
 
 export interface GoalProjection {
@@ -128,4 +129,49 @@ export const projectGoalDate = (goal: Goal): string | null => {
   const date = new Date();
   date.setMonth(date.getMonth() + months);
   return date.toLocaleDateString('en-KE', { month: 'short', year: 'numeric' });
+};
+
+export interface EndowmentProjection {
+  maturityValue: number; contributed: number; interestEarned: number;
+  termYears: number; endowmentType: 'regular' | 'anticipated';
+  totalPayouts: number; perPayout: number;
+  schedule: { year: number; date: string; amount: number }[];
+}
+
+const ym = (base: Date, monthsAhead: number): string => {
+  const d = new Date(base.getFullYear(), base.getMonth() + monthsAhead, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+/**
+ * Project an insurance endowment over its term. Reuses the same compound-annuity math
+ * as projectGoalInterest. Anticipated endowments split the projected value into equal
+ * survival benefits every `payoutIntervalYears`; regular endowments pay once at maturity.
+ */
+export const projectEndowment = (goal: Goal): EndowmentProjection | null => {
+  if (goal.category !== 'insurance' || !goal.endowmentType || !goal.termYears || goal.termYears <= 0
+    || !goal.interestRate || goal.interestRate <= 0) return null;
+  const months = goal.termYears * 12;
+  const monthlyRate = goal.interestRate / 100 / 12;
+  const P = goal.savedAmount || 0;
+  const C = goal.monthlyContribution || 0;
+  const growth = Math.pow(1 + monthlyRate, months);
+  const fvContributions = monthlyRate > 0 ? C * ((growth - 1) / monthlyRate) : C * months;
+  const maturityValue = Math.round(P * growth + fvContributions);
+  const contributed = Math.round(P + C * months);
+
+  const interval = goal.payoutIntervalYears || 0;
+  const anticipated = goal.endowmentType === 'anticipated' && interval > 0;
+  const totalPayouts = anticipated ? Math.max(1, Math.floor(goal.termYears / interval)) : 1;
+  const perPayout = Math.round(maturityValue / totalPayouts);
+
+  const now = new Date();
+  const schedule: { year: number; date: string; amount: number }[] = [];
+  if (anticipated) {
+    for (let k = 1; k <= totalPayouts; k++) schedule.push({ year: k * interval, date: ym(now, k * interval * 12), amount: perPayout });
+  } else {
+    schedule.push({ year: goal.termYears, date: ym(now, goal.termYears * 12), amount: maturityValue });
+  }
+
+  return { maturityValue, contributed, interestEarned: maturityValue - contributed, termYears: goal.termYears, endowmentType: goal.endowmentType, totalPayouts, perPayout, schedule };
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, CreditCard, Settings, ReceiptText, LifeBuoy, BarChart3, ClipboardList, SlidersHorizontal, MessageSquareWarning, Mail, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Settings, ReceiptText, LifeBuoy, BarChart3, ClipboardList, SlidersHorizontal, MessageSquareWarning, Mail, MoreHorizontal, FileText } from 'lucide-react';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 import { AdminLogin } from './AdminLogin';
 import { AdminOverview } from './views/AdminOverview';
@@ -15,8 +15,9 @@ import { AdminAuditLogs } from './views/AdminAuditLogs';
 import { AdminAppSettings } from './views/AdminAppSettings';
 import { AdminChatHealth } from './views/AdminChatHealth';
 import { AdminNewsletter } from './views/AdminNewsletter';
+import { AdminBlog } from './views/AdminBlog';
 
-type AdminView = 'overview' | 'users' | 'payments' | 'subscriptions' | 'supportInbox' | 'support' | 'reports' | 'chatHealth' | 'audit' | 'config' | 'settings' | 'newsletter';
+type AdminView = 'overview' | 'users' | 'payments' | 'subscriptions' | 'supportInbox' | 'support' | 'reports' | 'chatHealth' | 'audit' | 'config' | 'settings' | 'newsletter' | 'blog';
 
 const NAV: { view: AdminView; label: string; icon: React.ReactNode; roles: string[] }[] = [
   { view: 'overview',      label: 'Overview',      icon: <LayoutDashboard size={20} />, roles: ['super_admin', 'support', 'finance'] },
@@ -27,6 +28,7 @@ const NAV: { view: AdminView; label: string; icon: React.ReactNode; roles: strin
   { view: 'support',       label: 'Support Cases', icon: <LifeBuoy size={20} />,        roles: ['super_admin', 'support'] },
   { view: 'reports',       label: 'Reports',       icon: <BarChart3 size={20} />,       roles: ['super_admin', 'finance'] },
   { view: 'newsletter',    label: 'Newsletter',    icon: <Mail size={20} />,            roles: ['super_admin'] },
+  { view: 'blog',          label: 'Blog',          icon: <FileText size={20} />,        roles: ['super_admin'] },
   { view: 'chatHealth',    label: 'Chat Health',   icon: <MessageSquareWarning size={20} />, roles: ['super_admin'] },
   { view: 'audit',         label: 'Audit Logs',    icon: <ClipboardList size={20} />,   roles: ['super_admin'] },
   { view: 'config',        label: 'App Config',    icon: <SlidersHorizontal size={20} />, roles: ['super_admin'] },
@@ -34,7 +36,7 @@ const NAV: { view: AdminView; label: string; icon: React.ReactNode; roles: strin
 ];
 
 // Order tabs get priority for the mobile bottom bar; the rest fall into "More".
-const MOBILE_PRIORITY: AdminView[] = ['overview', 'users', 'payments', 'supportInbox', 'newsletter', 'subscriptions', 'support', 'reports', 'chatHealth', 'audit', 'config', 'settings'];
+const MOBILE_PRIORITY: AdminView[] = ['overview', 'users', 'payments', 'supportInbox', 'newsletter', 'blog', 'subscriptions', 'support', 'reports', 'chatHealth', 'audit', 'config', 'settings'];
 
 export const AdminPanel: React.FC = () => {
   const { admin, logout, login, loading, error } = useAdminAuth();
@@ -102,6 +104,7 @@ export const AdminPanel: React.FC = () => {
         {view === 'support'       && <AdminSupportCases admin={admin} />}
         {view === 'reports'       && <AdminReports />}
         {view === 'newsletter'    && <AdminNewsletter />}
+        {view === 'blog'          && <AdminBlog />}
         {view === 'chatHealth'    && <AdminChatHealth />}
         {view === 'audit'         && <AdminAuditLogs />}
         {view === 'config'        && <AdminAppSettings admin={admin} />}

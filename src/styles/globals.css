@@ -426,6 +426,8 @@ img,svg,video,canvas{max-width:100%}
 .blog-md blockquote { border-left:3px solid var(--gold); background:var(--gold-dim); padding:10px 16px; border-radius:0 8px 8px 0; margin:16px 0; font-style:italic; }
 .blog-md a { color:var(--gold); text-decoration:underline; }
 .blog-md img { max-width:100%; border-radius:10px; margin:14px 0; }
+.blog-md pre { background:var(--bg-surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; overflow-x:auto; font-size:.875em; margin:16px 0; }
+.blog-md pre code { background:none; border:none; padding:0; }
 .blog-md code { background:var(--bg-surface); border:1px solid var(--border); border-radius:5px; padding:1px 5px; font-size:.9em; }
 .blog-md table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; }
 .blog-md th,.blog-md td { border:1px solid var(--border); padding:8px 11px; text-align:left; }

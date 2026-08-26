@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-    BarChart3, Bell, Bot, ChevronDown, ChevronLeft, ChevronRight, CreditCard,
+    BarChart3, Bell, BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CreditCard,
     Download, Home, Info, Landmark, LineChart, Lock, LogOut, Moon, PiggyBank,
     Shield, Sun, TrendingUp, UserCircle, WalletCards, X
 } from 'lucide-react';
@@ -64,9 +64,19 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'upgrade',     label: 'Upgrade',    icon: PiggyBank,    group: 'intel' },
 ];
 
-// Bottom bar primary tabs (mobile)
-const FREE_MOBILE: AppView[] = [ 'advisor', 'expenses', 'goals', 'bills','dashboard'];
+// Bottom bar primary tabs (mobile). Overview ('dashboard') lives in the side nav, not here.
+const FREE_MOBILE: AppView[] = [ 'advisor', 'expenses', 'goals', 'bills'];
 const PAID_MOBILE: AppView[] = ['advisor', 'investments', 'chat', 'expenses', 'goals'];
+
+// Per-tab active accent for the bottom nav. Tabs look neutral until active, then take
+// their accent: Invest → green, Expenses/Bills → red, Blog → blue (below), rest → gold.
+const TAB_ACCENT_DEFAULT = { fg: 'var(--gold)', bg: 'var(--gold-dim)' };
+const TAB_ACCENT: Partial<Record<AppView, { fg: string; bg: string }>> = {
+  expenses:    { fg: 'var(--red)',   bg: 'var(--red-dim)' },
+  bills:       { fg: 'var(--red)',   bg: 'var(--red-dim)' },
+  goals:       { fg: 'var(--green)', bg: 'var(--green-dim)' },
+  investments: { fg: 'var(--green)', bg: 'var(--green-dim)' },
+};
 // MORE_ITEMS is commented out because the More sheet is currently disabled
 // const MORE_ITEMS = NAV_ITEMS.filter(n => !PAID_MOBILE.includes(n.id));
 
@@ -95,6 +105,9 @@ interface HeaderProps {
   userTier?:           SubscriptionTier;
   subscriptionNotice?: string | null;
   onOpenUpgrade?:      () => void;
+  // Menu-only mode for the public blog: keep the nav (sidebar + bottom nav) but hide
+  // the account-specific chrome (financial score, subscription bell, user menu/exports).
+  minimal?:            boolean;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -114,9 +127,12 @@ export const Header: React.FC<HeaderProps> = ({
                                                 userTier = 'free',
                                                 subscriptionNotice = null,
                                                 onOpenUpgrade,
+                                                minimal = false,
                                               }) => {
   const { theme, toggleTheme } = useTheme();
   const scoreColor = SCORE_COLOR[scoreLevel] ?? 'var(--text-3)';
+  // True while viewing the public /blog route tree — used to mark the Blog nav entries active.
+  const onBlog = typeof window !== 'undefined' && window.location.pathname.startsWith('/blog');
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileSide, setMobileSide] = useState(false);
@@ -265,6 +281,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Navigation groups */}
           <div className="fw-sidebar-scroll">
+            {/* Blog — public Financial Learning Hub (separate /blog route) */}
+            <div style={{ padding: '0 10px 4px' }}>
+              <div className="fw-sec-lbl fw-reveal">Learn</div>
+              <button
+                  className={`fw-navbtn${onBlog ? ' fw-navbtn--active' : ''}`}
+                  onClick={() => { window.location.href = '/blog'; }}
+                  title="Financial Learning Hub"
+                  aria-current={onBlog ? 'page' : undefined}
+              >
+                {onBlog && <span className="fw-navbtn-pip" aria-hidden="true" />}
+                <span className="fw-navbtn-icon" aria-hidden="true"><BookOpen size={19} strokeWidth={2.2} /></span>
+                <span className="fw-reveal fw-navbtn-label">Blog</span>
+              </button>
+            </div>
             {[
               { title: 'Main', items: mainItems },
               { title: 'Planning', items: planItems },
@@ -309,7 +339,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Footer */}
           <div className="fw-sidebar-footer">
-            {/* Score pill */}
+            {/* Score pill (hidden in menu-only/blog mode) */}
+            {!minimal && (
             <div className="fw-score-pill">
               {scoreRing(36)}
               <div className="fw-reveal fw-score-info">
@@ -327,6 +358,7 @@ export const Header: React.FC<HeaderProps> = ({
               {scoreLevel}
             </span>
             </div>
+            )}
             {/* Theme toggle */}
             <button className="fw-theme-btn" onClick={toggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
               <span className="fw-theme-emoji" style={{ display: 'inline-flex' }} aria-hidden="true">{theme === 'dark' ? <Moon size={15} strokeWidth={2.2} /> : <Sun size={15} strokeWidth={2.2} />}</span>
@@ -368,7 +400,8 @@ export const Header: React.FC<HeaderProps> = ({
               {theme === 'dark' ? <Sun size={16} strokeWidth={2.2} /> : <Moon size={16} strokeWidth={2.2} />}
             </button>
 
-            {/* Subscription notice */}
+            {/* Subscription notice (hidden in menu-only/blog mode) */}
+            {!minimal && (
             <button
                 className={`fw-notice-btn${subscriptionNotice ? ' has-notice' : ''}`}
                 onClick={onOpenUpgrade}
@@ -378,21 +411,10 @@ export const Header: React.FC<HeaderProps> = ({
               <Bell size={16} strokeWidth={2.2} />
               {subscriptionNotice && <span className="fw-notice-dot" />}
             </button>
+            )}
 
-            {/* Learn link — opens the public Financial Learning Hub */}
-            <a
-              href="/blog"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700,
-                color: 'var(--gold)', textDecoration: 'none', padding: '6px 12px',
-                border: '1px solid var(--border-acc)', borderRadius: 999,
-              }}
-              title="Financial Learning Hub"
-            >
-              Learn
-            </a>
-
-            {/* Score ring (topbar) */}
+            {/* Score ring (topbar) — hidden in menu-only/blog mode */}
+            {!minimal && (
             <div className="fw-tbar-score" style={{ color: scoreColor }}>
               {scoreRing(24)}
               <div className="fw-tbar-score-text">
@@ -400,8 +422,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="fw-tbar-score-lbl">Score</div>
               </div>
             </div>
+            )}
 
-            {/* User menu */}
+            {/* User menu (hidden in menu-only/blog mode) */}
+            {!minimal && (
             <div style={{ position: 'relative' }} ref={menuRef}>
               <button
                   className="fw-user-btn"
@@ -433,6 +457,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
               )}
             </div>
+            )}
           </div>
         </div>
 
@@ -443,19 +468,29 @@ export const Header: React.FC<HeaderProps> = ({
           {(userTier === 'free' ? FREE_MOBILE : PAID_MOBILE).map(id => {
             const item = NAV_ITEMS.find(n => n.id === id)!;
             const Icon = item.icon;
-
-            const isCenter = userTier === 'free' ? id === 'goals' : id === 'chat';
+            const active = activeView === id;
+            const accent = TAB_ACCENT[id] ?? TAB_ACCENT_DEFAULT;
             return (
               <button
                 key={id}
-                className={`fw-tab${activeView === id ? ' active' : ''}${isCenter ? ' fw-tab--center' : ''}`}
+                className={`fw-tab${active ? ' active' : ''}`}
+                style={active ? { color: accent.fg } : undefined}
                 onClick={() => go(id)}
               >
-                <div className="fw-tab-bubble"><Icon size={18} strokeWidth={2.2} /></div>
+                <div className="fw-tab-bubble" style={active ? { background: accent.bg, color: accent.fg } : undefined}><Icon size={18} strokeWidth={2.2} /></div>
                 <span>{id === 'chat' ? 'AI Coach' : (id === 'investments' || id === 'goals') ? 'Invest' : item.label}</span>
               </button>
             );
           })}
+          {/* Blog — public Financial Learning Hub (separate /blog route); blue when active */}
+          <button
+            className={`fw-tab${onBlog ? ' active' : ''}`}
+            style={onBlog ? { color: 'var(--blue)' } : undefined}
+            onClick={() => { window.location.href = '/blog'; }}
+          >
+            <div className="fw-tab-bubble" style={onBlog ? { background: 'var(--blue-dim)', color: 'var(--blue)' } : undefined}><BookOpen size={18} strokeWidth={2.2} /></div>
+            <span>Blog</span>
+          </button>
           {/*<button*/}
           {/*  className={`fw-tab${moreActive ? ' active' : ''}`}*/}
           {/*  onClick={() => setMoreOpen(true)}*/}

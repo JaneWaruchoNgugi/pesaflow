@@ -1,13 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "chat",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "articles",
       "queryScope": "COLLECTION",
       "fields": [

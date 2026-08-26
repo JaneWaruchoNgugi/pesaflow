@@ -102,7 +102,15 @@ const UpgradeWall: React.FC<{ view: AppView; userTier: SubscriptionTier }> = ({ 
 };
 
 const MainApp: React.FC = () => {
-  const [activeView, setActiveView] = useState<AppView>('advisor');
+  // Honour a ?view= deep-link (used by the public /blog menu to jump into a section).
+  const [activeView, setActiveView] = useState<AppView>(() => {
+    try {
+      const v = new URLSearchParams(window.location.search).get('view');
+      const valid: AppView[] = ['dashboard','expenses','insights','advisor','investments','goals','bills','networth','chat','emergency','alerts','upgrade','profile'];
+      if (v && (valid as string[]).includes(v)) return v as AppView;
+    } catch { /* no window / bad URL — fall through */ }
+    return 'advisor';
+  });
   const [stage, setStage] = useState<AppStage>('landing');
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');

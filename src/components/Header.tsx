@@ -379,6 +379,19 @@ export const Header: React.FC<HeaderProps> = ({
               {subscriptionNotice && <span className="fw-notice-dot" />}
             </button>
 
+            {/* Learn link — opens the public Financial Learning Hub */}
+            <a
+              href="/blog"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700,
+                color: 'var(--gold)', textDecoration: 'none', padding: '6px 12px',
+                border: '1px solid var(--border-acc)', borderRadius: 999,
+              }}
+              title="Financial Learning Hub"
+            >
+              Learn
+            </a>
+
             {/* Score ring (topbar) */}
             <div className="fw-tbar-score" style={{ color: scoreColor }}>
               {scoreRing(24)}

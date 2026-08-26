@@ -7,7 +7,27 @@ import type { Article, BlogFeedPage } from '../../types';
 
 const PAGE = 9;
 
-const toArticle = (snap: DocumentSnapshot): Article => ({ ...(snap.data() as Article), slug: snap.id });
+// Date fields are ISO strings in Phase 1 seed data, but the Phase 3 CMS may write
+// Firestore Timestamps. Coerce either shape to the ISO string the Article type promises,
+// so `new Date(...)` / `Date.parse(...)` downstream never see a Timestamp object.
+const asIso = (v: unknown): string | null => {
+  if (v == null) return null;
+  if (typeof v === 'string') return v;
+  const ts = v as { toDate?: () => Date };
+  return typeof ts.toDate === 'function' ? ts.toDate().toISOString() : null;
+};
+
+const toArticle = (snap: DocumentSnapshot): Article => {
+  const data = snap.data() as Article;
+  return {
+    ...data,
+    slug: snap.id,
+    publishedAt: asIso(data.publishedAt),
+    scheduledFor: asIso(data.scheduledFor),
+    createdAt: asIso(data.createdAt) ?? '',
+    updatedAt: asIso(data.updatedAt) ?? '',
+  };
+};
 
 /** One page of published articles, newest first. Pass a cursor slug to page forward. */
 export const fetchFeed = async (cursorSlug: string | null, categoryId?: string): Promise<BlogFeedPage> => {

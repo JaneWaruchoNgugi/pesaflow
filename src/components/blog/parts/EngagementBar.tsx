@@ -8,8 +8,8 @@ interface Props { article: Article; onGate: () => void; }
 // prompt. Real persistence arrives in Phase 2.
 export const EngagementBar: React.FC<Props> = ({ article, onGate }) => (
   <div style={S.wrap}>
-    <button style={S.btn} onClick={onGate}><Heart size={15} /> {article.counts.likes}</button>
-    <button style={S.btn} onClick={onGate}><MessageCircle size={15} /> {article.counts.comments}</button>
+    <button style={S.btn} onClick={onGate} aria-label="Like"><Heart size={15} /> {article.counts.likes}</button>
+    <button style={S.btn} onClick={onGate} aria-label="Comment"><MessageCircle size={15} /> {article.counts.comments}</button>
     <button style={S.btn} onClick={onGate}><Bookmark size={15} /> Save</button>
   </div>
 );

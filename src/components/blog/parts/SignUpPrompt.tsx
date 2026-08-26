@@ -3,10 +3,10 @@ import React from 'react';
 // Phase 1 gating: engagement actions open this. Real like/comment persistence is Phase 2;
 // wired Ask-AI is Phase 4. "Create account" sends the visitor into the main app at /.
 export const SignUpPrompt: React.FC<{ title: string; body: string; onClose: () => void }> = ({ title, body, onClose }) => (
-  <div style={S.overlay} role="dialog" aria-modal="true">
+  <div style={S.overlay} role="dialog" aria-modal="true" aria-labelledby="signup-prompt-title">
     <div style={S.backdrop} onClick={onClose} />
     <div style={S.modal}>
-      <div style={S.title}>{title}</div>
+      <div id="signup-prompt-title" style={S.title}>{title}</div>
       <p style={S.body}>{body}</p>
       <a href="/?intent=signup" style={S.primary}>Create a free account</a>
       <button style={S.link} onClick={onClose}>Keep reading</button>

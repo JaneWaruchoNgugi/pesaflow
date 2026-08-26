@@ -1,18 +1,25 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
+import { BlogApp } from './components/blog/BlogApp.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { seedDemoIfNeeded } from './lib/demoData'
 
-// Guests see a populated app on first paint: seed demo data (once) before render,
-// so the data hooks initialise from it. No-ops for signed-in/returning users.
 try { seedDemoIfNeeded(); } catch { /* non-fatal: empty app still works */ }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <BrowserRouter>
+        <Routes>
+          {/* Public blog — rendered OUTSIDE the app's AuthGate */}
+          <Route path="/blog/*" element={<BlogApp />} />
+          {/* Existing app — unchanged, stays at root to protect Google-auth redirects */}
+          <Route path="/*" element={<App />} />
+        </Routes>
+      </BrowserRouter>
     </ErrorBoundary>
   </StrictMode>,
 )

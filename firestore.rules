@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User data — each signed-in user may only access their own tree; admins (users
+    // whose token carries the `admin` claim minted by adminSignIn) may access any.
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                         && (request.auth.uid == userId || request.auth.token.admin == true);
+
+      // Financial subcollections (expenses, investments, goals, bills, networth, chat)
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth != null
+                           && (request.auth.uid == userId || request.auth.token.admin == true);
+      }
+
+      // Named data docs (profile, habits, emergencyFund)
+      match /data/{docId} {
+        allow read, write: if request.auth != null
+                           && (request.auth.uid == userId || request.auth.token.admin == true);
+      }
+    }
+
+    // Admin accounts — client-managed because this app does not use Firebase Auth
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    // Payments — reads allowed for status polling, writes only via Cloud Functions
+    match /payments/{paymentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Admin support workflow data
+    match /supportCases/{caseId} {
+      allow read, write: if true;
+    }
+
+    // User-to-support chat threads
+    match /supportThreads/{threadId} {
+      allow read, write: if true;
+      match /messages/{messageId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Chat reliability logs
+    match /chatErrors/{errorId} {
+      allow read, write: if true;
+    }
+
+    // Admin audit trail
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Business-level app configuration
+    match /appConfig/{configId} {
+      allow read, write: if true;
+    }
+
+    // Newsletter subscribers — anyone can subscribe (create their own email doc),
+    // but the list is NOT publicly readable. Admin/Cloud Functions read it to send updates.
+    match /subscribers/{subId} {
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.size() < 200;
+      allow read, update, delete: if false; // Admin SDK / admin only
+    }
+
+    // Blog: articles — public read ONLY when published; writes are admin-only.
+    // List/query reads must filter to status=='published' to satisfy this rule.
+    match /articles/{slug} {
+      allow read: if resource.data.status == 'published';
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Blog: categories — public read; admin write.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

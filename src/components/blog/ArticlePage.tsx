@@ -1,8 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useArticle } from '../../hooks/useArticle';
 import { useCategories } from '../../hooks/useCategories';
+import { useBlogUser } from '../../hooks/useBlogUser';
+import { useArticleSocial } from '../../hooks/useArticleSocial';
+import { useSavedArticles } from '../../hooks/useSavedArticles';
+import { recordView } from '../../lib/blog/commentsRepo';
 import { parseSegments } from '../../lib/blog/markdown';
 import { buildMetaTags } from '../../lib/blog/seo';
 import { useSEO } from '../../lib/blog/useSEO';
@@ -15,9 +19,16 @@ import { MoreArticles } from './parts/MoreArticles';
 import { ShareBar } from './parts/ShareBar';
 import { EngagementBar } from './parts/EngagementBar';
 import { AskAiCard } from './parts/AskAiCard';
+import { CommentsSection } from './parts/CommentsSection';
+import { NewsletterCard } from './parts/NewsletterCard';
 import { SignUpPrompt } from './parts/SignUpPrompt';
 import { EmptyState } from './parts/EmptyState';
 import type { ContentSegment } from '../../types';
+
+// Dedupe views to one per article per page load (resets on full reload/navigation).
+// Guards against React re-renders / StrictMode double-invoke without suppressing genuine
+// revisits — a refresh is a new page load, so it counts again.
+const viewedThisLoad = new Set<string>();
 
 const renderSegment = (seg: ContentSegment, i: number): React.ReactNode => {
   if (seg.kind === 'markdown') return <MarkdownRenderer key={i} text={seg.text} />;
@@ -33,7 +44,22 @@ export const ArticlePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { article, loading } = useArticle(slug);
   const { categories } = useCategories();
+  const { user, signedIn } = useBlogUser();
+  const social = useArticleSocial(slug, user);
+  const saved = useSavedArticles(user?.uid);
   const [gate, setGate] = useState<null | { title: string; body: string }>(null);
+
+  const scrollToComments = () => {
+    const el = document.getElementById('comments');
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.querySelector('textarea')?.focus(); }
+  };
+
+  // Record a view once per page load (see viewedThisLoad above).
+  useEffect(() => {
+    if (!slug || viewedThisLoad.has(slug)) return;
+    viewedThisLoad.add(slug);
+    recordView(slug).catch(() => { /* view counting is best-effort */ });
+  }, [slug]);
 
   const segments = useMemo(() => (article ? parseSegments(article.bodyMarkdown) : []), [article]);
   const category = article ? categories.find(c => c.id === article.categoryId) : undefined;
@@ -55,43 +81,103 @@ export const ArticlePage: React.FC = () => {
   const openGate = () => setGate({ title: "Join the conversation", body: "Create a free PesaFlow account to like, comment, and save articles — and get advice tailored to your money." });
 
   return (
-    <article style={S.page}>
+    <div style={S.page}>
       <ReadingProgress />
-      <Link to="/blog" style={S.back}><ArrowLeft size={16} /> All articles</Link>
-      {category && <Link to={`/blog/category/${category.slug}`} style={S.pill}>{category.name}</Link>}
-      <h1 style={S.title}>{article.title}</h1>
-      <div style={S.byline}>
-        <span style={S.avatar} />
-        <span>{article.authorName}</span><span>·</span>
-        {article.publishedAt && <span>{new Date(article.publishedAt).toLocaleDateString()}</span>}
-        <span>·</span><span>{article.readMinutes} min read</span>
+      <style>{`
+        .blog-article { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start; }
+        .blog-aside { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 16px; }
+        @media (max-width: 940px) {
+          .blog-article { grid-template-columns: 1fr; gap: 24px; }
+          .blog-aside { position: static; top: auto; }
+        }
+      `}</style>
+
+      <div className="blog-article">
+        {/* ── Main column ─────────────────────────── */}
+        <article>
+          <Link to="/blog" style={S.back}><ArrowLeft size={16} /> All articles</Link>
+          {category && <Link to={`/blog/category/${category.slug}`} style={S.pill}>{category.name}</Link>}
+          <h1 style={S.title}>{article.title}</h1>
+          <div style={S.byline}>
+            <span style={S.avatar} />
+            <span>{article.authorName}</span><span>·</span>
+            {article.publishedAt && <span>{new Date(article.publishedAt).toLocaleDateString()}</span>}
+            <span>·</span><span>{article.readMinutes} min read</span>
+          </div>
+          {article.coverImageUrl && <img src={article.coverImageUrl} alt="" style={S.cover} />}
+
+          <div style={S.body}>{segments.map(renderSegment)}</div>
+
+          {/* Likes / comments / share stay at the end of the article body */}
+          <div style={S.engageRow}>
+            <EngagementBar
+              likeCount={social.likeCount}
+              liked={social.liked}
+              commentCount={social.commentCount}
+              saved={saved.isSaved(article.slug)}
+              onLike={social.toggleLike}
+              onComment={scrollToComments}
+              onSave={() => saved.toggle(article)}
+              onGate={openGate}
+              signedIn={signedIn}
+            />
+            <div style={{ marginLeft: 'auto' }}>
+              <ShareBar url={window.location.href} title={article.title} />
+            </div>
+          </div>
+
+          <CommentsSection
+            slug={article.slug}
+            user={user}
+            comments={social.comments}
+            error={social.error}
+            onGate={openGate}
+            onPost={social.post}
+            onLike={social.likeComment}
+            onDelete={social.remove}
+          />
+
+          <MoreArticles currentSlug={article.slug} />
+        </article>
+
+        {/* ── Right sidebar ───────────────────────── */}
+        <aside className="blog-aside">
+          <AskAiCard
+            examplePrompt="I earn KES 1,200 per day. How much should I save?"
+            onAsk={() => {
+              // Signed-in users go straight to the in-app AI chat; guests get the sign-up funnel.
+              if (signedIn) { window.location.href = '/?view=chat'; return; }
+              setGate({ title: 'Ask PesaFlow AI', body: 'Create a free account so PesaFlow AI can answer using your real income and goals.' });
+            }}
+          />
+
+          <NewsletterCard />
+
+          {categories.length > 0 && (
+            <div style={S.sideCard}>
+              <div style={S.sideLabel}>Explore topics</div>
+              <div style={S.topics}>
+                {categories.slice(0, 10).map(c => (
+                  <Link key={c.id} to={`/blog/category/${c.slug}`} style={S.topic}>{c.name}</Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </aside>
       </div>
-      {article.coverImageUrl && <img src={article.coverImageUrl} alt="" style={S.cover} />}
-
-      <div style={S.body}>{segments.map(renderSegment)}</div>
-
-      <div style={S.engageRow}>
-        <EngagementBar article={article} onGate={openGate} />
-        <div style={{ marginLeft: 'auto' }}>
-          <ShareBar url={window.location.href} title={article.title} />
-        </div>
-      </div>
-
-      <AskAiCard
-        examplePrompt="I earn KES 1,200 per day. How much should I save?"
-        onAsk={() => setGate({ title: 'Ask PesaFlow AI', body: 'Create a free account so PesaFlow AI can answer using your real income and goals.' })}
-      />
-
-      <MoreArticles currentSlug={article.slug} />
 
       {gate && <SignUpPrompt title={gate.title} body={gate.body} onClose={() => setGate(null)} />}
-    </article>
+    </div>
   );
 };
 
 const S: Record<string, React.CSSProperties> = {
-  page: { maxWidth: 720, margin: '0 auto', padding: '24px 18px 64px' },
+  page: { maxWidth: 1120, margin: '0 auto', padding: '24px 18px 64px' },
   loading: { textAlign: 'center', color: 'var(--text-3)', padding: 48 },
+  sideCard: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 },
+  sideLabel: { fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 12 },
+  topics: { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  topic: { fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 999, padding: '6px 12px', textDecoration: 'none' },
   back: { display: 'flex', width: 'fit-content', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--text-2)', textDecoration: 'none', marginBottom: 14 },
   pill: { display: 'inline-block', fontSize: 11, fontWeight: 700, color: 'var(--gold)', background: 'var(--gold-dim)', border: '1px solid var(--border-acc)', padding: '4px 11px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '.04em', textDecoration: 'none' },
   title: { fontFamily: 'Cormorant Garamond, serif', fontSize: 34, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.12, margin: '12px 0 10px' },

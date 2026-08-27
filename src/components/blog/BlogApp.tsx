@@ -5,6 +5,7 @@ import type { AppView } from '../../types';
 import { BlogHome } from './BlogHome';
 import { ArticlePage } from './ArticlePage';
 import { CategoryPage } from './CategoryPage';
+import { SavedArticlesPage } from './SavedArticlesPage';
 
 // Clicking an app nav item from the public blog leaves the /blog route tree and opens
 // the main app at that section. App.tsx reads ?view= on load to land there.
@@ -28,6 +29,7 @@ export const BlogApp: React.FC = () => (
       <main className="main-content">
         <Routes>
           <Route index element={<BlogHome />} />
+          <Route path="saved" element={<SavedArticlesPage />} />
           <Route path="category/:categorySlug" element={<CategoryPage />} />
           <Route path=":slug" element={<ArticlePage />} />
           <Route path="*" element={<Navigate to="/blog" replace />} />

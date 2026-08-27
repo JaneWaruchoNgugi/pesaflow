@@ -382,6 +382,16 @@ export interface Article {
   counts: ArticleCounts;
 }
 
+export interface ArticleComment {
+  id: string;                   // == Firestore doc id
+  authorUid: string;
+  authorName: string;
+  text: string;
+  createdAt: string | null;     // ISO string (null while a local write is pending)
+  parentId: string | null;      // null = top-level; else the comment being replied to
+  likedBy: string[];            // uids who liked this comment
+}
+
 export interface Category {
   id: string;                   // == Firestore doc id, e.g. "mmfs"
   name: string;

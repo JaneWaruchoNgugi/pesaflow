@@ -9,6 +9,7 @@ export const SignUpPrompt: React.FC<{ title: string; body: string; onClose: () =
       <div id="signup-prompt-title" style={S.title}>{title}</div>
       <p style={S.body}>{body}</p>
       <a href="/?intent=signup" style={S.primary}>Create a free account</a>
+      <a href="/?intent=login" style={S.secondary}>Already have an account? Log in</a>
       <button style={S.link} onClick={onClose}>Keep reading</button>
     </div>
   </div>
@@ -20,6 +21,7 @@ const S: Record<string, React.CSSProperties> = {
   modal: { position: 'relative', background: 'var(--bg-card)', border: '1px solid var(--border-acc)', borderRadius: 16, padding: 24, maxWidth: 360, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-lg)' },
   title: { fontFamily: 'Cormorant Garamond, serif', fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 },
   body: { fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 16 },
-  primary: { display: 'block', padding: '11px 16px', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none', marginBottom: 10 },
+  primary: { display: 'block', padding: '11px 16px', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none', marginBottom: 8 },
+  secondary: { display: 'block', padding: '10px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-1)', borderRadius: 10, fontWeight: 600, fontSize: 13.5, textDecoration: 'none', marginBottom: 10 },
   link: { background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: 13, cursor: 'pointer' },
 };

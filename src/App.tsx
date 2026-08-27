@@ -40,6 +40,7 @@ import { PRO_PRICES, isPro, isTestProEmail, FREE_GOAL_LIMIT } from './lib/pricin
 import { PaymentGate }      from './components/PaymentGate';
 import { UpgradePage }      from './components/UpgradePage';
 import { ProfilePage }      from './components/ProfilePage';
+import { AboutPage }        from './components/AboutPage';
 import { AdminPanel }       from './components/admin/AdminPanel';
 import { SupportChatWidget } from './components/SupportChatWidget';
 import { PrivacyPolicy }     from './components/PrivacyPolicy';
@@ -106,7 +107,7 @@ const MainApp: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('view');
-      const valid: AppView[] = ['dashboard','expenses','insights','advisor','investments','goals','bills','networth','chat','emergency','alerts','upgrade','profile','tools'];
+      const valid: AppView[] = ['dashboard','expenses','insights','advisor','investments','goals','bills','networth','chat','emergency','alerts','upgrade','profile','tools','about'];
       if (v && (valid as string[]).includes(v)) return v as AppView;
     } catch { /* no window / bad URL — fall through */ }
     return 'advisor';
@@ -546,6 +547,9 @@ const MainApp: React.FC = () => {
               onSelectPlan={openPaidPlan}
             />
           )}
+
+          {/* ── About Us ────────────────────────────────────────── */}
+          {activeView === 'about' && <AboutPage onNavigate={setActiveView} />}
 
           {/* ── Profile ─────────────────────────────────────────── */}
           {activeView === 'profile' && auth.profile && (

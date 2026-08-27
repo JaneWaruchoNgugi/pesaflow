@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-    BarChart3, Bell, BookOpen, Bot, Calculator, ChevronDown, ChevronLeft, ChevronRight, CreditCard,
+    BarChart3, Bell, BookOpen, Bot, Building2, Calculator, ChevronDown, ChevronLeft, ChevronRight, CreditCard,
     Download, Home, Info, Landmark, Lock, LogOut, Moon, PiggyBank,
     Shield, Sun, TrendingUp, UserCircle, WalletCards, X
 } from 'lucide-react';
@@ -62,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'alerts',      label: 'Alerts',     icon: Bell,         group: 'intel' },
   { id: 'profile',     label: 'Profile',    icon: UserCircle,   group: 'intel' },
   { id: 'upgrade',     label: 'Upgrade',    icon: PiggyBank,    group: 'intel' },
+  { id: 'about',       label: 'About Us',   icon: Building2,    group: 'intel' },
 ];
 
 // Bottom bar primary tabs (mobile). Overview ('dashboard') lives in the side nav, not here.
@@ -326,12 +327,13 @@ export const Header: React.FC<HeaderProps> = ({
                               background: isActive ? 'linear-gradient(135deg, var(--gold-l), var(--gold))' : 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(217,119,6,0.08))',
                               border: '1px solid var(--border-acc)',
                               borderRadius: 10,
-                              color: 'var(--gold)',
+                              // When active the button fills with the gold gradient, so ink must go dark to stay legible.
+                              color: isActive ? '#0A1628' : 'var(--gold)',
                             } : undefined}
                         >
                           {isActive && !isUpgrade && <span className="fw-navbtn-pip" aria-hidden="true" />}
                           <span className="fw-navbtn-icon" aria-hidden="true"><Icon size={19} strokeWidth={2.2} /></span>
-                          <span className="fw-reveal fw-navbtn-label" style={isUpgrade ? { fontWeight: 700 } : undefined}>{item.label}</span>
+                          <span className="fw-reveal fw-navbtn-label" style={isUpgrade ? { fontWeight: 700, color: isActive ? '#0A1628' : 'var(--gold)' } : undefined}>{item.label}</span>
                           {item.id === 'chat' && !locked && (
                               <span className="fw-reveal fw-ai-chip" aria-label="AI feature">AI</span>
                           )}
@@ -341,7 +343,7 @@ export const Header: React.FC<HeaderProps> = ({
                               </span>
                           )}
                           {isUpgrade && (
-                              <span className="fw-reveal" style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', background: 'var(--gold-dim)', borderRadius: 4, padding: '2px 6px', marginLeft: 'auto' }}>PRO</span>
+                              <span className="fw-reveal" style={{ fontSize: 10, fontWeight: 800, color: isActive ? '#0A1628' : 'var(--gold)', background: isActive ? 'rgba(10,22,40,0.14)' : 'var(--gold-dim)', borderRadius: 4, padding: '2px 6px', marginLeft: 'auto' }}>PRO</span>
                           )}
                         </button>
                     );

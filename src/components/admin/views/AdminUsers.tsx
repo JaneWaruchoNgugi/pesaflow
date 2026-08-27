@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { adminDb as db } from '../../../lib/firebase';
-import type { AdminUser, UserProfile, SubscriptionTier } from '../../../types';
+import type { AdminUser, UserProfile, BillingCycle } from '../../../types';
 import { UserDetailDrawer } from './UserDetailDrawer';
-import { TIER_COLOR, TIER_LABEL, ACTIVE_TIERS, LEGACY_TIERS, GOLD_COMING_SOON } from '../../../lib/tiers';
+import { TIER_COLOR, TIER_LABEL } from '../../../lib/tiers';
 
-// Change-tier dropdown keeps every tier so an admin can still set a legacy tier.
-const TIERS: SubscriptionTier[] = [...ACTIVE_TIERS, ...LEGACY_TIERS];
+// The current plans an admin can assign: Free, or Pro on each billing cycle.
+const PLAN_OPTIONS: { value: string; label: string }[] = [
+  { value: 'free', label: 'Free' },
+  { value: 'pro-daily', label: 'Pro — Daily' },
+  { value: 'pro-weekly', label: 'Pro — Weekly' },
+  { value: 'pro-monthly', label: 'Pro — Monthly' },
+];
 
 interface UserRow extends UserProfile { uid: string; }
 
@@ -29,10 +34,30 @@ export const AdminUsers: React.FC<{ canEdit: boolean; admin: AdminUser }> = ({ c
       .finally(() => setLoading(false));
   }, []);
 
-  const changeTier = async (uid: string, tier: SubscriptionTier) => {
-    await updateDoc(doc(db, 'users', uid), { tier });
-    setUsers(prev => prev.map(u => u.uid === uid ? { ...u, tier } : u));
+  // Assigning a plan grants/revokes a full subscription (not just the tier flag), so an
+  // admin can instantly put a test account on Pro. Pro gets a 1-year active window so it
+  // doesn't expire mid-test; the chosen cycle is recorded for display/reporting.
+  const setPlan = async (uid: string, plan: string) => {
+    const now = new Date();
+    let updates: Partial<UserProfile>;
+    if (plan === 'free') {
+      updates = { tier: 'free', subscriptionStatus: 'expired', subscriptionExpiresAt: now.toISOString() };
+    } else {
+      const cycle = plan.split('-')[1] as BillingCycle; // daily | weekly | monthly
+      updates = {
+        tier: 'pro', billingCycle: cycle, subscriptionStatus: 'active',
+        subscriptionStart: now.toISOString(),
+        subscriptionExpiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+    }
+    await updateDoc(doc(db, 'users', uid), updates as Record<string, unknown>);
+    setUsers(prev => prev.map(u => u.uid === uid ? { ...u, ...updates } : u));
   };
+
+  const planValue = (u: UserRow): string =>
+    u.tier === 'free' ? 'free'
+      : u.tier === 'pro' ? `pro-${u.billingCycle ?? 'monthly'}`
+        : 'legacy';
 
   const filtered = users.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) || u.phone.includes(search)
@@ -72,20 +97,21 @@ export const AdminUsers: React.FC<{ canEdit: boolean; admin: AdminUser }> = ({ c
             </div>
             {canEdit ? (
               <select
-                value={u.tier}
+                value={planValue(u)}
                 onClick={e => e.stopPropagation()}
-                onChange={e => { e.stopPropagation(); changeTier(u.uid, e.target.value as SubscriptionTier); }}
+                onChange={e => { e.stopPropagation(); setPlan(u.uid, e.target.value); }}
                 style={{ ...selectStyle, color: TIER_COLOR[u.tier] }}
               >
-                {TIERS.map(t => (
-                  <option key={t} value={t}>
-                    {TIER_LABEL[t]}{t === 'gold' && GOLD_COMING_SOON ? ' (coming soon)' : ''}
-                  </option>
+                {planValue(u) === 'legacy' && (
+                  <option value="legacy" disabled>{TIER_LABEL[u.tier]} (legacy)</option>
+                )}
+                {PLAN_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             ) : (
               <span style={{ fontSize: 12, fontWeight: 700, color: TIER_COLOR[u.tier] }}>
-                {TIER_LABEL[u.tier]}{u.tier === 'gold' && GOLD_COMING_SOON ? ' (coming soon)' : ''}
+                {TIER_LABEL[u.tier]}{u.tier === 'pro' && u.billingCycle ? ` · ${u.billingCycle}` : ''}
               </span>
             )}
           </div>

@@ -78,7 +78,7 @@ export interface MonthlyBreakdown {
 export type AppView =
     | 'dashboard' | 'expenses' | 'insights' | 'advisor'
     | 'investments' | 'goals' | 'bills' | 'networth' | 'chat'
-    | 'emergency' | 'alerts' | 'upgrade' | 'profile' | 'tools';
+    | 'emergency' | 'alerts' | 'upgrade' | 'profile' | 'tools' | 'about';
 
 // ─── Investment types ──────────────────────────────────────
 

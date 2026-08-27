@@ -12,6 +12,7 @@ import { MarkdownRenderer } from '../../blog/content/MarkdownRenderer';
 import {
   adminListArticles, adminSaveArticle, adminDeleteArticle,
   adminListCategories, adminSaveCategory, adminDeleteCategory,
+  adminGetArticleCounts,
 } from '../../../lib/blog/adminBlogRepo';
 
 const nowIso = () => new Date().toISOString();
@@ -48,7 +49,14 @@ export const AdminBlog: React.FC = () => {
     setLoading(true);
     try {
       const [a, c] = await Promise.all([adminListArticles(), adminListCategories()]);
-      setArticles(a); setCategories(c);
+      setCategories(c);
+      setArticles(a);
+      // Likes & comments live in subcollections now — overlay their real totals onto each
+      // article (views stay on counts.views, bumped by the public view counter).
+      const counts = await Promise.all(a.map(x => adminGetArticleCounts(x.slug).catch(() => null)));
+      setArticles(a.map((x, i) => counts[i]
+        ? { ...x, counts: { ...x.counts, likes: counts[i]!.likes, comments: counts[i]!.comments } }
+        : x));
     } catch (e) {
       flash(false, (e as Error).message || 'Failed to load. Are you signed in as an admin and are the blog Firestore rules deployed?');
     } finally { setLoading(false); }

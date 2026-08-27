@@ -25,6 +25,7 @@ import {
   InvestmentForm, InvestmentList,
   InvestmentSummaryBar, PortfolioAllocation,
 } from './components/InvestmentManager';
+import { MMFCalculator } from './components/MMFCalculator';
 import { AuthGate }         from './components/AuthGate';
 import { Goals }            from './components/Goals';
 import { Bills }            from './components/Bills';
@@ -111,9 +112,16 @@ const MainApp: React.FC = () => {
     } catch { /* no window / bad URL — fall through */ }
     return 'advisor';
   });
-  const [stage, setStage] = useState<AppStage>('landing');
+  // Honour a ?intent=signup|login deep-link (used by the public /blog gates so
+  // "like / comment / create account" lands straight on the auth form, not the app home).
+  const initialIntent = (() => {
+    try { return new URLSearchParams(window.location.search).get('intent'); } catch { return null; }
+  })();
+  const [stage, setStage] = useState<AppStage>(
+    initialIntent === 'signup' || initialIntent === 'login' ? 'auth' : 'landing',
+  );
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free');
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialIntent === 'login' ? 'login' : 'signup');
   const [showPolicy, setShowPolicy] = useState(false);
   // Captured once at mount so render stays pure (no Date.now() during render). The
   // subscription notice below only needs day-level accuracy, refreshed on next app load.
@@ -363,22 +371,28 @@ const MainApp: React.FC = () => {
           )}
 
           {/* ── Investments ─────────────────────────────────────── */}
-          {activeView === 'investments' && (isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} /> :
+          {activeView === 'investments' && (
             <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button style={exportBtnStyle} onClick={() => exportInvestmentsToCSV(investments)}>
-                  <Download size={14} strokeWidth={2.2} /> Export CSV
-                </button>
-              </div>
-              <InvestmentSummaryBar summary={investmentSummary} monthlyIncome={profile.monthlyIncome} />
-              {investmentSummary.activeCount > 0 && <PortfolioAllocation summary={investmentSummary} />}
-              <InvestmentForm onAdd={addInvestment} />
-              <InvestmentList
-                investments={investments}
-                onRemove={removeInvestment}
-                onUpdateStatus={updateStatus}
-                currency={profile.currency}
-              />
+              {/* Free tool — available to every tier, sits above the paywall */}
+              <MMFCalculator />
+              {isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} /> : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button style={exportBtnStyle} onClick={() => exportInvestmentsToCSV(investments)}>
+                      <Download size={14} strokeWidth={2.2} /> Export CSV
+                    </button>
+                  </div>
+                  <InvestmentSummaryBar summary={investmentSummary} monthlyIncome={profile.monthlyIncome} />
+                  {investmentSummary.activeCount > 0 && <PortfolioAllocation summary={investmentSummary} />}
+                  <InvestmentForm onAdd={addInvestment} />
+                  <InvestmentList
+                    investments={investments}
+                    onRemove={removeInvestment}
+                    onUpdateStatus={updateStatus}
+                    currency={profile.currency}
+                  />
+                </>
+              )}
             </div>
           )}
 

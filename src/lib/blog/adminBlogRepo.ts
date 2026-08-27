@@ -1,10 +1,20 @@
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, getCountFromServer, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { adminDb as db } from '../firebase';
 import type { Article, Category } from '../../types';
 
 // All blog writes/reads here go through adminDb, whose session carries the `admin`
 // custom claim — satisfying the admin-only Firestore rules on /articles and /categories.
 // Admins can read EVERYTHING (drafts, scheduled), unlike the public repo (articlesRepo).
+
+/** Real like & comment totals for an article — they live in subcollections now, not on
+ *  the article doc, so the admin list counts them directly (views stay on counts.views). */
+export const adminGetArticleCounts = async (slug: string): Promise<{ likes: number; comments: number }> => {
+  const [likes, comments] = await Promise.all([
+    getCountFromServer(collection(db, 'articles', slug, 'likes')),
+    getCountFromServer(collection(db, 'articles', slug, 'comments')),
+  ]);
+  return { likes: likes.data().count, comments: comments.data().count };
+};
 
 // ── Articles ───────────────────────────────────────────────
 const toArticle = (d: { id: string; data: () => unknown }): Article =>

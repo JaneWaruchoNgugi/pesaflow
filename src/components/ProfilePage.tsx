@@ -33,6 +33,7 @@ const daysUntilRenewal = (profile: UserProfile): number | null => {
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ profile, uid, onNavigate }) => {
   const [name, setName] = useState(profile.name);
+  const [phone, setPhone] = useState(profile.phone ?? '');
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -40,16 +41,30 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ profile, uid, onNaviga
   const [nameMsg, setNameMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const handleSaveName = async () => {
-    if (!name.trim() || name === profile.name) return;
+  const trimmedPhone = phone.trim();
+  const dirty = name.trim() !== profile.name || trimmedPhone !== (profile.phone ?? '');
+  // Loose validation: allow an optional +, digits, spaces and dashes (7–15 chars).
+  const phoneValid = trimmedPhone === '' || /^\+?[\d\s-]{7,15}$/.test(trimmedPhone);
+
+  const handleSaveDetails = async () => {
+    if (!name.trim() || !dirty) return;
+    if (!phoneValid) { setNameMsg('Enter a valid phone number, e.g. 0712 345 678.'); return; }
     setSaving(true);
-    await updateDoc(doc(db, 'users', uid), { name: name.trim() });
-    // update localStorage
-    const stored = JSON.parse(localStorage.getItem('finwise_auth_profile') || '{}');
-    localStorage.setItem('finwise_auth_profile', JSON.stringify({ ...stored, name: name.trim() }));
-    setNameMsg('Name updated!');
-    setSaving(false);
-    setTimeout(() => setNameMsg(''), 3000);
+    const updates: Record<string, string> = {};
+    if (name.trim() !== profile.name) updates.name = name.trim();
+    if (trimmedPhone !== (profile.phone ?? '')) updates.phone = trimmedPhone;
+    try {
+      await updateDoc(doc(db, 'users', uid), updates);
+      // Mirror into localStorage so the change survives a reload before the next profile fetch.
+      const stored = JSON.parse(localStorage.getItem('finwise_auth_profile') || '{}');
+      localStorage.setItem('finwise_auth_profile', JSON.stringify({ ...stored, ...updates }));
+      setNameMsg('Saved!');
+      setTimeout(() => setNameMsg(''), 3000);
+    } catch {
+      setNameMsg('Could not save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // The 6-digit PIN is the Firebase password. Changing it reauthenticates with the
@@ -121,14 +136,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ profile, uid, onNaviga
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
           <label style={label}>Phone Number</label>
-          <input value={profile.phone} disabled style={{ ...input, opacity: 0.5, cursor: 'not-allowed' }} />
+          <input
+            type="tel"
+            inputMode="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            placeholder="e.g. 0712 345 678"
+            style={input}
+          />
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-3)', margin: '6px 0 16px' }}>
           Member since {new Date(profile.createdAt).toLocaleDateString('en-KE', { day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
-        {nameMsg && <div style={{ fontSize: 12, color: 'var(--green)', marginBottom: 8 }}>{nameMsg}</div>}
-        <button onClick={handleSaveName} disabled={saving || name === profile.name || !name.trim()} style={saveBtn}>
-          Save Name
+        {nameMsg && <div style={{ fontSize: 12, color: nameMsg === 'Saved!' ? 'var(--green)' : 'var(--red)', marginBottom: 8 }}>{nameMsg}</div>}
+        <button onClick={handleSaveDetails} disabled={saving || !dirty || !name.trim()} style={{ ...saveBtn, opacity: !dirty || !name.trim() ? 0.5 : 1 }}>
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </div>
 

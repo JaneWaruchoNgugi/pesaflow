@@ -3,8 +3,9 @@ import { collection, getDocs } from 'firebase/firestore';
 import { adminDb as db } from '../../../lib/firebase';
 import type { SubscriptionTier, UserProfile } from '../../../types';
 
-const TIERS: SubscriptionTier[] = ['free', 'pro', 'silver', 'gold', 'platinum'];
+const LEGACY_TIERS: SubscriptionTier[] = ['silver', 'gold', 'platinum'];
 const TIER_COLOR: Record<SubscriptionTier, string> = { free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA', pro: '#D97706' };
+const TIER_LABEL: Record<SubscriptionTier, string> = { free: 'Free', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', pro: 'Pro' };
 
 interface PaymentRow { amount?: number; status?: string; tier?: SubscriptionTier; createdAt?: unknown; }
 interface SupportCaseRow { status?: string; priority?: string; type?: string; }
@@ -66,17 +67,18 @@ export const AdminReports: React.FC = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
         <Panel title="Revenue By Tier">
-          {TIERS.filter(t => t !== 'free').map(tier => {
+          {/* Pro is the only sold plan; a legacy tier only appears if it still has revenue. */}
+          {(['pro', ...LEGACY_TIERS.filter(t => stats.paidPayments.some(p => p.tier === t))] as SubscriptionTier[]).map(tier => {
             const revenue = stats.paidPayments.filter(p => p.tier === tier).reduce((sum, p) => sum + Number(p.amount || 0), 0);
             const max = Math.max(1, stats.revenue);
-            return <Bar key={tier} label={tier} value={`KES ${revenue.toLocaleString()}`} pct={(revenue / max) * 100} color={TIER_COLOR[tier]} />;
+            return <Bar key={tier} label={TIER_LABEL[tier]} value={`KES ${revenue.toLocaleString()}`} pct={(revenue / max) * 100} color={TIER_COLOR[tier]} />;
           })}
         </Panel>
 
         <Panel title="Users By Tier">
-          {TIERS.map(tier => {
+          {(['free', 'pro', ...LEGACY_TIERS.filter(t => users.some(u => u.tier === t))] as SubscriptionTier[]).map(tier => {
             const count = users.filter(u => u.tier === tier).length;
-            return <Bar key={tier} label={tier} value={count.toLocaleString()} pct={users.length ? (count / users.length) * 100 : 0} color={TIER_COLOR[tier]} />;
+            return <Bar key={tier} label={TIER_LABEL[tier]} value={count.toLocaleString()} pct={users.length ? (count / users.length) * 100 : 0} color={TIER_COLOR[tier]} />;
           })}
         </Panel>
 

@@ -43,8 +43,6 @@ import { ProfilePage }      from './components/ProfilePage';
 import { AdminPanel }       from './components/admin/AdminPanel';
 import { SupportChatWidget } from './components/SupportChatWidget';
 import { PrivacyPolicy }     from './components/PrivacyPolicy';
-import { GuestBanner }       from './components/GuestBanner';
-import { clearDemoData }     from './lib/demoData';
 
 import {
   exportExpensesToCSV,
@@ -165,7 +163,6 @@ const MainApp: React.FC = () => {
     bills.bills.some(b => !b.isDemo);
 
   const goToAuth = (mode: 'login' | 'signup') => { setAuthMode(mode); setStage('auth'); };
-  const handleClearDemo = () => { clearDemoData(); window.location.reload(); };
 
   const handleUpdateIncome = (
     income: number,
@@ -269,16 +266,6 @@ const MainApp: React.FC = () => {
     <ThemeProvider>
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {isGuest && (
-        <GuestBanner
-          hasRealData={hasRealData}
-          onSignUp={() => goToAuth('signup')}
-          onLogin={() => goToAuth('login')}
-          onAbout={() => setStage('about')}
-          onClearDemo={handleClearDemo}
-        />
-      )}
-
       {/* Payment overlay when upgrading from within the app */}
       {stage === 'payment' && auth.status === 'ready' && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 500 }}>
@@ -315,6 +302,9 @@ const MainApp: React.FC = () => {
         userTier={userTier}
         subscriptionNotice={subscriptionNotice}
         onOpenUpgrade={() => setActiveView('upgrade')}
+        isGuest={isGuest}
+        onSignUp={() => goToAuth('signup')}
+        onLogin={() => goToAuth('login')}
       />
 
       <main className="main-content">

@@ -3,8 +3,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { adminDb as db } from '../../../lib/firebase';
 import type { SubscriptionTier, UserProfile } from '../../../types';
 
-const TIERS: SubscriptionTier[] = ['free', 'silver', 'gold', 'platinum'];
-const TIER_COLOR: Record<SubscriptionTier, string> = { free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA' };
+const TIERS: SubscriptionTier[] = ['free', 'pro', 'silver', 'gold', 'platinum'];
+const TIER_COLOR: Record<SubscriptionTier, string> = { free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA', pro: '#D97706' };
 
 interface PaymentRow { amount?: number; status?: string; tier?: SubscriptionTier; createdAt?: unknown; }
 interface SupportCaseRow { status?: string; priority?: string; type?: string; }

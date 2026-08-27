@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-    BarChart3, Bell, BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CreditCard,
-    Download, Home, Info, Landmark, LineChart, Lock, LogOut, Moon, PiggyBank,
+    BarChart3, Bell, BookOpen, Bot, Calculator, ChevronDown, ChevronLeft, ChevronRight, CreditCard,
+    Download, Home, Info, Landmark, Lock, LogOut, Moon, PiggyBank,
     Shield, Sun, TrendingUp, UserCircle, WalletCards, X
 } from 'lucide-react';
 import type { AppView } from '../types';
@@ -52,8 +52,8 @@ const NAV_ITEMS: NavItem[] = [
     { id: 'advisor',     label: 'Advisor',    icon:Home ,          group: 'main' },
     { id: 'dashboard',   label: 'Overview',   icon: Info,         group: 'main' },
   { id: 'expenses',    label: 'Expenses',   icon: WalletCards,  group: 'main' },
-  { id: 'investments', label: 'Invest',     icon: LineChart,    group: 'main' },
-  { id: 'goals',       label: 'Investments', icon: TrendingUp,  group: 'plan' },
+  { id: 'tools',       label: 'Tools',      icon: Calculator,   group: 'main' },
+  { id: 'investments', label: 'Investments',icon: TrendingUp,   group: 'plan' },
   { id: 'bills',       label: 'Bills',      icon: CreditCard,   group: 'plan' },
   { id: 'networth',    label: 'Net Worth',  icon: Landmark,     group: 'plan' },
   { id: 'emergency',   label: 'Emergency',  icon: Shield,       group: 'plan' },
@@ -65,8 +65,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 // Bottom bar primary tabs (mobile). Overview ('dashboard') lives in the side nav, not here.
-const FREE_MOBILE: AppView[] = [ 'advisor', 'expenses', 'goals', 'bills'];
-const PAID_MOBILE: AppView[] = ['advisor', 'investments', 'chat', 'expenses', 'goals'];
+const FREE_MOBILE: AppView[] = ['advisor', 'expenses', 'investments', 'bills'];
+const PAID_MOBILE: AppView[] = ['advisor', 'expenses', 'investments', 'chat'];
 
 // Per-tab active accent for the bottom nav. Tabs look neutral until active, then take
 // their accent: Invest → green, Expenses/Bills → red, Blog → blue (below), rest → gold.
@@ -74,7 +74,6 @@ const TAB_ACCENT_DEFAULT = { fg: 'var(--gold)', bg: 'var(--gold-dim)' };
 const TAB_ACCENT: Partial<Record<AppView, { fg: string; bg: string }>> = {
   expenses:    { fg: 'var(--red)',   bg: 'var(--red-dim)' },
   bills:       { fg: 'var(--red)',   bg: 'var(--red-dim)' },
-  goals:       { fg: 'var(--green)', bg: 'var(--green-dim)' },
   investments: { fg: 'var(--green)', bg: 'var(--green-dim)' },
 };
 // MORE_ITEMS is commented out because the More sheet is currently disabled
@@ -141,15 +140,16 @@ export const Header: React.FC<HeaderProps> = ({
   const [userMenu, setUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Memoized nav groups — hide locked views for current tier
+  // Locked (Pro-only) views stay VISIBLE in the nav with a lock badge — clicking one
+  // opens its preview + upgrade wall, so free users can see what Pro unlocks.
   const lockedViews = PLAN_LOCKED_VIEWS[userTier] ?? [];
-  const isVisible = (id: AppView) => !lockedViews.includes(id);
+  const isLockedView = (id: AppView) => lockedViews.includes(id);
 
   const { mainItems, planItems, intelItems } = useMemo(() => ({
-    mainItems:  NAV_ITEMS.filter(n => n.group === 'main' && n.id !== 'upgrade' && isVisible(n.id)),
-    planItems:  NAV_ITEMS.filter(n => n.group === 'plan' && n.id !== 'upgrade' && isVisible(n.id)),
-    intelItems: NAV_ITEMS.filter(n => n.group === 'intel' && (n.id !== 'upgrade' || userTier === 'free' || userTier === 'silver') && isVisible(n.id)),
-  }), [userTier, lockedViews]);
+    mainItems:  NAV_ITEMS.filter(n => n.group === 'main' && n.id !== 'upgrade'),
+    planItems:  NAV_ITEMS.filter(n => n.group === 'plan' && n.id !== 'upgrade'),
+    intelItems: NAV_ITEMS.filter(n => n.group === 'intel' && (n.id !== 'upgrade' || userTier === 'free' || userTier === 'silver')),
+  }), [userTier]);
 
   // Scroll effect
   useEffect(() => {
@@ -305,6 +305,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {group.items.map((item: NavItem) => {
                     const isActive = activeView === item.id;
                     const isUpgrade = item.id === 'upgrade';
+                    const locked = isLockedView(item.id);
                     const Icon = item.icon;
                     return (
                         <button
@@ -324,8 +325,13 @@ export const Header: React.FC<HeaderProps> = ({
                           {isActive && !isUpgrade && <span className="fw-navbtn-pip" aria-hidden="true" />}
                           <span className="fw-navbtn-icon" aria-hidden="true"><Icon size={19} strokeWidth={2.2} /></span>
                           <span className="fw-reveal fw-navbtn-label" style={isUpgrade ? { fontWeight: 700 } : undefined}>{item.label}</span>
-                          {item.id === 'chat' && (
+                          {item.id === 'chat' && !locked && (
                               <span className="fw-reveal fw-ai-chip" aria-label="AI feature">AI</span>
+                          )}
+                          {locked && !isUpgrade && (
+                              <span className="fw-reveal" aria-label="Pro feature" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: '.04em', color: 'var(--gold)', background: 'var(--gold-dim)', border: '1px solid var(--border-acc)', borderRadius: 5, padding: '2px 6px', marginLeft: 'auto' }}>
+                                <Lock size={9} strokeWidth={2.6} /> PRO
+                              </span>
                           )}
                           {isUpgrade && (
                               <span className="fw-reveal" style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold)', background: 'var(--gold-dim)', borderRadius: 4, padding: '2px 6px', marginLeft: 'auto' }}>PRO</span>

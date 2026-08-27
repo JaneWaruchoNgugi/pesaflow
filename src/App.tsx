@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart3, Bell, Bot, Crown, Download, Landmark, Lock, ReceiptText, Shield, Sparkles, TrendingUp } from 'lucide-react';
+import { BarChart3, Bell, Bot, Crown, Download, Landmark, Lock, ReceiptText, Shield, TrendingUp } from 'lucide-react';
 import './styles/globals.css';
-import type { AppView, SubscriptionTier } from './types';
+import type { AppView, SubscriptionTier, BillingCycle } from './types';
 import { useExpenses }      from './hooks/useExpenses';
 import { useInvestments }   from './hooks/useInvestments';
 import { useGoals }         from './hooks/useGoals';
@@ -25,7 +25,7 @@ import {
   InvestmentForm, InvestmentList,
   InvestmentSummaryBar, PortfolioAllocation,
 } from './components/InvestmentManager';
-import { MMFCalculator } from './components/MMFCalculator';
+import { ToolsPage } from './components/ToolsPage';
 import { AuthGate }         from './components/AuthGate';
 import { Goals }            from './components/Goals';
 import { Bills }            from './components/Bills';
@@ -36,6 +36,7 @@ import { AlertsPanel }      from './components/AlertsPanel';
 import { Loans }            from './components/Loans';
 import { LandingPage }      from './components/LandingPage';
 import { PLAN_LOCKED_VIEWS } from './lib/planAccess';
+import { PRO_PRICES, isPro, isTestProEmail, FREE_GOAL_LIMIT } from './lib/pricing';
 import { PaymentGate }      from './components/PaymentGate';
 import { UpgradePage }      from './components/UpgradePage';
 import { ProfilePage }      from './components/ProfilePage';
@@ -51,11 +52,10 @@ import {
   exportNetWorthToCSV,
 } from './hooks/exportUtils';
 
-const INTRO_PRICE_END_MS = Date.parse('2026-06-30T20:59:59.999+03:00');
 const currentTierPrice = (tier: SubscriptionTier): number => {
-  const introPrices: Record<SubscriptionTier, number> = { free: 0, silver: 10, gold: 20, platinum: 999 };
-  const standardPrices: Record<SubscriptionTier, number> = { free: 0, silver: 299, gold: 599, platinum: 999 };
-  return Date.now() <= INTRO_PRICE_END_MS ? introPrices[tier] : standardPrices[tier];
+  // Pro is billed per cycle (see lib/pricing); the monthly rate represents it here.
+  const prices: Record<SubscriptionTier, number> = { free: 0, silver: 299, gold: 599, platinum: 999, pro: PRO_PRICES.monthly };
+  return prices[tier];
 };
 
 const TIER_META: Record<SubscriptionTier, { name: string; price: number; color: string }> = {
@@ -63,6 +63,7 @@ const TIER_META: Record<SubscriptionTier, { name: string; price: number; color: 
   silver:   { name: 'Silver',   price: currentTierPrice('silver'),   color: '#C0C0C0' },
   gold:     { name: 'Gold',     price: currentTierPrice('gold'),     color: '#C9A84C' },
   platinum: { name: 'Platinum', price: currentTierPrice('platinum'), color: '#A78BFA' },
+  pro:      { name: 'Pro',      price: currentTierPrice('pro'),      color: '#D97706' },
 };
 
 type AppStage = 'landing' | 'about' | 'payment' | 'auth' | 'app';
@@ -72,32 +73,32 @@ const wallCopy: Partial<Record<AppView, { icon: React.ComponentType<{ size?: num
   bills: { icon: ReceiptText, tier: 'silver', title: 'Turn expenses into a monthly bill plan', body: 'Silver unlocks recurring bills, due dates, and payment status so users stop guessing what is coming next.', bullets: ['Recurring bills', 'Due date tracking', 'Paid and overdue status'] },
   networth: { icon: Landmark, tier: 'silver', title: 'Show the full financial position', body: 'Silver adds net worth so assets and debts sit beside daily spending.', bullets: ['Assets and liabilities', 'Net worth summary', 'Progress over time'] },
   emergency: { icon: Shield, tier: 'silver', title: 'Build an emergency fund with structure', body: 'Silver gives users a target, current balance, and months-covered view.', bullets: ['Emergency target', 'Deposit tracking', 'Months covered'] },
-  investments: { icon: TrendingUp, tier: 'gold', title: 'Investment tracking is coming soon', body: 'Our upcoming Gold plan will track SACCOs, MMFs, stocks, bonds, crypto, and long-term projections in one portfolio view.', bullets: ['Portfolio tracker', 'Allocation view', 'Growth projections'] },
-  insights: { icon: BarChart3, tier: 'gold', title: 'Deeper spending insights are coming soon', body: 'Gold will turn your logged expenses into deeper comparisons, lifestyle warnings, and savings opportunities.', bullets: ['Ideal vs actual allocation', 'Lifestyle overspend warnings', 'Savings opportunity estimates'] },
-  chat: { icon: Bot, tier: 'gold', title: 'The AI money advisor is coming soon', body: 'Gold will bring an AI advisor with context from your spending, goals, bills, investments, and net worth.', bullets: ['Personal AI guidance', 'Context-aware answers', 'Action plans'] },
-  alerts: { icon: Bell, tier: 'gold', title: 'Alerts & SOS support are coming soon', body: 'Gold will add emergency alerts and AI-supported action planning when the numbers need attention.', bullets: ['SOS contacts', 'Emergency summaries', 'AI action plans'] },
+  investments: { icon: TrendingUp, tier: 'pro', title: 'Track your whole investment portfolio', body: 'Pro tracks your SACCOs, MMFs, stocks, bonds and crypto in one place — with allocation and long-term growth projections. The MMF estimator above stays free.', bullets: ['Portfolio tracker', 'Allocation view', 'Growth projections'] },
+  insights: { icon: BarChart3, tier: 'pro', title: 'Deeper spending insights & analytics', body: 'Pro turns your logged expenses into ideal-vs-actual comparisons, overspend warnings and savings opportunities.', bullets: ['Ideal vs actual allocation', 'Overspend warnings', 'Savings opportunities'] },
+  chat: { icon: Bot, tier: 'pro', title: 'Your personal AI money advisor', body: 'Pro unlocks an AI advisor that answers using your real spending, goals, bills, investments and net worth.', bullets: ['Personal AI guidance', 'Context-aware answers', 'Action plans'] },
+  alerts: { icon: Bell, tier: 'pro', title: 'Alerts & SOS support', body: 'Pro adds emergency alerts and AI-supported action planning when your numbers need attention.', bullets: ['SOS contacts', 'Emergency summaries', 'AI action plans'] },
 };
 
 // Module-scoped (not defined inside the component) so its identity is stable across
 // renders — a component defined during render remounts its subtree every time.
-const UpgradeWall: React.FC<{ view: AppView; userTier: SubscriptionTier }> = ({ view, userTier }) => {
-  const copy = wallCopy[view] ?? { icon: Lock, tier: 'silver' as SubscriptionTier, title: `${view.charAt(0).toUpperCase() + view.slice(1)} is a premium feature`, body: 'Upgrade your plan to unlock this and more tools.', bullets: ['More planning tools', 'Better money visibility', 'Premium support'] };
+const UpgradeWall: React.FC<{ view: AppView; userTier: SubscriptionTier; onUpgrade: () => void }> = ({ view, onUpgrade }) => {
+  const copy = wallCopy[view] ?? { icon: Lock, tier: 'pro' as SubscriptionTier, title: `${view.charAt(0).toUpperCase() + view.slice(1)} is a Pro feature`, body: 'Upgrade to Pro to unlock this and more tools.', bullets: ['More planning tools', 'Better money visibility', 'Priority support'] };
   const Icon = copy.icon;
   return (
     <div style={upgradeWallStyle} className="animate-in">
       <div style={wallIconStyle}><Icon size={28} strokeWidth={2.1} /></div>
-      <div style={wallBadgeStyle}><Sparkles size={13} /> Coming soon</div>
+      <div style={wallBadgeStyle}><Crown size={13} /> Pro feature</div>
       <div style={wallTitleStyle}>{copy.title}</div>
       <div style={wallBodyStyle}>{copy.body}</div>
       <div style={wallBulletGridStyle}>
         {copy.bullets.map((bullet) => <div key={bullet} style={wallBulletStyle}><Lock size={13} /> {bullet}</div>)}
       </div>
       <div style={wallActionRowStyle}>
-        <button style={{ ...wallGoldBtnStyle, opacity: 0.7, cursor: 'default' }} disabled>
-          <Crown size={16} /> Premium — Coming soon
+        <button style={wallGoldBtnStyle} onClick={onUpgrade}>
+          <Crown size={16} /> Unlock with Pro →
         </button>
       </div>
-      <div style={wallCurrentStyle}>Everything else is <strong style={{ color: TIER_META[userTier].color }}>free</strong> — enjoy the app while we finish this.</div>
+      <div style={wallCurrentStyle}>From <strong style={{ color: '#D97706' }}>KES 20/day</strong> · pay with M-Pesa. Core tracking stays free.</div>
     </div>
   );
 };
@@ -107,7 +108,7 @@ const MainApp: React.FC = () => {
   const [activeView, setActiveView] = useState<AppView>(() => {
     try {
       const v = new URLSearchParams(window.location.search).get('view');
-      const valid: AppView[] = ['dashboard','expenses','insights','advisor','investments','goals','bills','networth','chat','emergency','alerts','upgrade','profile'];
+      const valid: AppView[] = ['dashboard','expenses','insights','advisor','investments','goals','bills','networth','chat','emergency','alerts','upgrade','profile','tools'];
       if (v && (valid as string[]).includes(v)) return v as AppView;
     } catch { /* no window / bad URL — fall through */ }
     return 'advisor';
@@ -121,6 +122,7 @@ const MainApp: React.FC = () => {
     initialIntent === 'signup' || initialIntent === 'login' ? 'auth' : 'landing',
   );
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('free');
+  const [selectedCycle, setSelectedCycle] = useState<BillingCycle>('monthly');
   const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialIntent === 'login' ? 'login' : 'signup');
   const [showPolicy, setShowPolicy] = useState(false);
   // Captured once at mount so render stays pure (no Date.now() during render). The
@@ -142,8 +144,9 @@ const MainApp: React.FC = () => {
 
   const {
     investments, summary: investmentSummary,
-    addInvestment, removeInvestment, updateStatus,
+    addInvestment, removeInvestment, updateStatus, updateInvestment,
   } = useInvestments();
+  const [editingInv, setEditingInv] = useState<import('./types').Investment | null>(null);
 
   const emergencyFund = useEmergencyFund(breakdown.totalExpenses || profile.monthlyIncome * 0.6);
   const alerts = useAlerts();
@@ -170,9 +173,10 @@ const MainApp: React.FC = () => {
     meta?: Partial<Pick<import('./types').FinancialProfile, 'incomeMode' | 'dailyAmount' | 'daysPerWeek'>>,
   ) => updateProfile(income, profile.currency, streams, meta);
 
-  const openPaidPlan = (tier: SubscriptionTier) => {
+  const openPaidPlan = (tier: SubscriptionTier, cycle: BillingCycle = 'monthly') => {
     if (isGuest) { goToAuth('signup'); return; } // guests must sign up before paying
     setSelectedTier(tier);
+    setSelectedCycle(cycle);
     setStage('payment');
   };
 
@@ -232,7 +236,11 @@ const MainApp: React.FC = () => {
   }
 
   // ── Stage: App ──────────────────────────────────────────
-  const userTier: SubscriptionTier = auth.profile?.tier ?? 'free';
+  // Test accounts (see pricing.ts) always resolve to Pro, regardless of their stored tier.
+  const userTier: SubscriptionTier = isTestProEmail(auth.profile?.email) ? 'pro' : (auth.profile?.tier ?? 'free');
+  const pro = isPro(userTier);
+  // Free users who tap a Pro-only action (CSV export) are sent to the upgrade page.
+  const gatedExport = (fn: () => void) => () => { if (pro) fn(); else setActiveView('upgrade'); };
   const subscriptionNotice = (() => {
     const profile = auth.profile;
     if (!profile) return null;
@@ -275,16 +283,17 @@ const MainApp: React.FC = () => {
       {stage === 'payment' && auth.status === 'ready' && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 500 }}>
           <PaymentGate
-            key={selectedTier + '-' + (auth.profile?.phone ?? '')}
+            key={selectedTier + '-' + selectedCycle + '-' + (auth.profile?.phone ?? '')}
             tierName={TIER_META[selectedTier].name}
             tierPrice={TIER_META[selectedTier].price}
             tierColor={TIER_META[selectedTier].color}
             userId={auth.profile?.uid ?? ''}
             userPhone={auth.profile?.phone ?? ''}
             tier={selectedTier}
+            initialCycle={selectedCycle}
             onPaymentComplete={async () => {
               const refreshed = await auth.refreshProfile();
-              if (refreshed?.tier !== selectedTier) return;
+              if (!refreshed || refreshed.tier === 'free') return;
               setStage('app');
               setActiveView('dashboard');
             }}
@@ -299,17 +308,17 @@ const MainApp: React.FC = () => {
         scoreLevel={insight.level}
         userName={auth.profile?.name}
         onLock={auth.logout}
-        onLogout={auth.deleteAccount}
-        onExportExpenses={() => exportExpensesToCSV(monthlyExpenses)}
-        onExportInvestments={() => exportInvestmentsToCSV(investments)}
-        onExportNetWorth={() => exportNetWorthToCSV(netWorth.items)}
+        onLogout={auth.logout}
+        onExportExpenses={gatedExport(() => exportExpensesToCSV(monthlyExpenses))}
+        onExportInvestments={gatedExport(() => exportInvestmentsToCSV(investments))}
+        onExportNetWorth={gatedExport(() => exportNetWorthToCSV(netWorth.items))}
         userTier={userTier}
         subscriptionNotice={subscriptionNotice}
         onOpenUpgrade={() => setActiveView('upgrade')}
       />
 
       <main className="main-content">
-        <div style={{  margin: '0 auto' }}>
+        <div className="main-content-inner">
 
           {/* ── Advisor ─────────────────────────────────────────── */}
           {activeView === 'advisor' && (
@@ -319,6 +328,15 @@ const MainApp: React.FC = () => {
               billsTotal={bills.monthlyTotal}
               goalsTotal={goalsThisMonth}
               breakdown={breakdown}
+              hasData={hasRealData}
+              monthlyDebt={loans.loans.reduce((s, l) => s + (l.monthlyPayment || 0), 0)}
+              debtTotal={loans.totalOwed}
+              investmentsTotal={investmentSummary.totalInvested}
+              netWorth={nwSummary.netWorth}
+              goalsSaved={goals.totalSaved}
+              goalsTarget={goals.totalTargeted}
+              emergencyCurrent={emergencyFund.data.currentAmount}
+              emergencyTarget={emergencyFund.targetAmount}
             />
           )}
 
@@ -360,7 +378,7 @@ const MainApp: React.FC = () => {
             <div className="animate-in">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <MonthSelector months={availableMonths(expenses, selectedMonth)} value={selectedMonth} onChange={setSelectedMonth} />
-                <button style={exportBtnStyle} onClick={() => exportExpensesToCSV(monthlyExpenses)}>
+                <button style={exportBtnStyle} onClick={gatedExport(() => exportExpensesToCSV(monthlyExpenses))}>
                   <Download size={14} strokeWidth={2.2} /> Export CSV
                 </button>
               </div>
@@ -370,33 +388,38 @@ const MainApp: React.FC = () => {
             </div>
           )}
 
-          {/* ── Investments ─────────────────────────────────────── */}
-          {activeView === 'investments' && (isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} /> :
+          {/* ── Tools (free calculators: MMF + Loan) ────────────── */}
+          {activeView === 'tools' && <ToolsPage />}
+
+          {/* ── Investments (Pro portfolio tracker) ─────────────── */}
+          {activeView === 'investments' && (isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* MMF estimator — a free tool, also handy alongside the portfolio tracker */}
-              <MMFCalculator />
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button style={exportBtnStyle} onClick={() => exportInvestmentsToCSV(investments)}>
+                <button style={exportBtnStyle} onClick={gatedExport(() => exportInvestmentsToCSV(investments))}>
                   <Download size={14} strokeWidth={2.2} /> Export CSV
                 </button>
               </div>
               <InvestmentSummaryBar summary={investmentSummary} monthlyIncome={profile.monthlyIncome} />
               {investmentSummary.activeCount > 0 && <PortfolioAllocation summary={investmentSummary} />}
-              <InvestmentForm onAdd={addInvestment} />
+              <InvestmentForm
+                onAdd={addInvestment}
+                editing={editingInv}
+                onUpdate={updateInvestment}
+                onCloseEdit={() => setEditingInv(null)}
+              />
               <InvestmentList
                 investments={investments}
                 onRemove={removeInvestment}
                 onUpdateStatus={updateStatus}
+                onEdit={setEditingInv}
                 currency={profile.currency}
               />
             </div>
           )}
 
-          {/* ── Goals (labeled "Investments" in the nav) ────────── */}
-          {activeView === 'goals' && (isLocked('goals') ? <UpgradeWall view="goals" userTier={userTier} /> :
+          {/* ── Goals (no longer in the nav; still reachable via deep link) ── */}
+          {activeView === 'goals' && (isLocked('goals') ? <UpgradeWall view="goals" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* MMF Return Estimator — free tool, reachable by every tier here */}
-              <MMFCalculator />
               <Goals
                 goals={goals.goals}
                 activeGoals={goals.activeGoals}
@@ -409,14 +432,14 @@ const MainApp: React.FC = () => {
                 onUpdateSaved={goals.updateSaved}
                 onUpdate={goals.updateGoal}
                 currency={profile.currency}
-                maxGoals={undefined}
+                maxGoals={pro ? undefined : FREE_GOAL_LIMIT}
                 onUpgrade={() => setActiveView('upgrade')}
               />
             </div>
           )}
 
           {/* ── Bills ───────────────────────────────────────────── */}
-          {activeView === 'bills' && (isLocked('bills') ? <UpgradeWall view="bills" userTier={userTier} /> :
+          {activeView === 'bills' && (isLocked('bills') ? <UpgradeWall view="bills" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <Bills
               bills={bills.bills}
               sortedBills={bills.sortedBills}
@@ -433,10 +456,10 @@ const MainApp: React.FC = () => {
           )}
 
           {/* ── Net Worth ───────────────────────────────────────── */}
-          {activeView === 'networth' && (isLocked('networth') ? <UpgradeWall view="networth" userTier={userTier} /> :
+          {activeView === 'networth' && (isLocked('networth') ? <UpgradeWall view="networth" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <div className="animate-in">
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                <button style={exportBtnStyle} onClick={() => exportNetWorthToCSV(netWorth.items)}>
+                <button style={exportBtnStyle} onClick={gatedExport(() => exportNetWorthToCSV(netWorth.items))}>
                   <Download size={14} strokeWidth={2.2} /> Export CSV
                 </button>
               </div>
@@ -461,7 +484,7 @@ const MainApp: React.FC = () => {
           )}
 
           {/* ── Emergency Fund ──────────────────────────────────── */}
-          {activeView === 'emergency' && (isLocked('emergency') ? <UpgradeWall view="emergency" userTier={userTier} /> :
+          {activeView === 'emergency' && (isLocked('emergency') ? <UpgradeWall view="emergency" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <EmergencyFund
               data={emergencyFund.data}
               targetAmount={emergencyFund.targetAmount}
@@ -478,12 +501,12 @@ const MainApp: React.FC = () => {
           )}
 
           {/* ── Insights ────────────────────────────────────────── */}
-          {activeView === 'insights' && (isLocked('insights') ? <UpgradeWall view="insights" userTier={userTier} /> :
+          {activeView === 'insights' && (isLocked('insights') ? <UpgradeWall view="insights" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <Insights breakdown={breakdown} profile={profile} />
           )}
 
           {/* ── AI Chat ─────────────────────────────────────────── */}
-          {activeView === 'chat' && (isLocked('chat') ? <UpgradeWall view="chat" userTier={userTier} /> :
+          {activeView === 'chat' && (isLocked('chat') ? <UpgradeWall view="chat" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <AIChat
               userId={auth.profile?.uid ?? ''}
               profile={profile}
@@ -502,7 +525,7 @@ const MainApp: React.FC = () => {
           )}
 
           {/* ── Alerts & SOS ────────────────────────────────────── */}
-          {activeView === 'alerts' && (isLocked('alerts') ? <UpgradeWall view="alerts" userTier={userTier} /> :
+          {activeView === 'alerts' && (isLocked('alerts') ? <UpgradeWall view="alerts" userTier={userTier} onUpgrade={() => setActiveView('upgrade')} /> :
             <AlertsPanel
               userId={auth.profile?.uid ?? ''}
               userTier={userTier}

@@ -66,22 +66,23 @@ const timingSafeStrEqual = (a, b) => {
 };
 // ── Helpers ───────────────────────────────────────────────
 const fmt = (amount, currency = 'KES') => currency + ' ' + Number(amount || 0).toLocaleString('en-KE', { maximumFractionDigits: 0 });
-const SUBSCRIPTION_DAYS = 30;
-const SUBSCRIPTION_MS = SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000;
-const INTRO_PRICE_END_MS = Date.parse('2026-06-30T20:59:59.999Z'); // June 30, 2026 23:59:59 EAT
-const INTRO_SUBSCRIPTION_PRICES = {
-    silver: 10,
-    gold: 20,
-    platinum: 999,
-};
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SUBSCRIPTION_DAYS = 30; // legacy flat tiers
+// Pro plan — three M-Pesa billing cycles. Keep in sync with src/lib/pricing.ts.
+const PRO_PRICES = { daily: 20, weekly: 99, monthly: 299 };
+const CYCLE_DAYS = { daily: 1, weekly: 7, monthly: 30 };
+const isBillingCycle = (c) => c === 'daily' || c === 'weekly' || c === 'monthly';
+// Legacy tier prices (grandfathered — no longer sold as new subs).
 const STANDARD_SUBSCRIPTION_PRICES = {
     silver: 299,
     gold: 599,
     platinum: 999,
+    pro: PRO_PRICES.monthly,
 };
-const getSubscriptionPrice = (tier) => Date.now() <= INTRO_PRICE_END_MS
-    ? INTRO_SUBSCRIPTION_PRICES[tier]
-    : STANDARD_SUBSCRIPTION_PRICES[tier];
+// The exact amount we expect for a given (tier, cycle). Pro varies by cycle.
+const getSubscriptionPrice = (tier, cycle) => tier === 'pro' ? PRO_PRICES[cycle !== null && cycle !== void 0 ? cycle : 'monthly'] : STANDARD_SUBSCRIPTION_PRICES[tier];
+// How many days a successful payment grants, given tier + cycle.
+const grantDays = (tier, cycle) => tier === 'pro' ? CYCLE_DAYS[cycle !== null && cycle !== void 0 ? cycle : 'monthly'] : SUBSCRIPTION_DAYS;
 const normalizePhone = (phone) => {
     const cleaned = String(phone || '').replace(/[^\d+]/g, '');
     if (/^0\d{9}$/.test(cleaned))
@@ -98,7 +99,7 @@ const sortByCreatedAtDesc = (a, b) => {
     const bTime = (_f = (_e = (_d = b.data().createdAt) === null || _d === void 0 ? void 0 : _d.toMillis) === null || _e === void 0 ? void 0 : _e.call(_d)) !== null && _f !== void 0 ? _f : 0;
     return bTime - aTime;
 };
-const isPaidTier = (tier) => tier === 'silver' || tier === 'gold' || tier === 'platinum';
+const isPaidTier = (tier) => tier === 'silver' || tier === 'gold' || tier === 'platinum' || tier === 'pro';
 async function postBongoStkRequest(payload) {
     const raw = JSON.stringify(payload);
     return await new Promise((resolve, reject) => {
@@ -133,13 +134,15 @@ async function activateSubscription(paymentId, payment) {
     const tier = payment.tier;
     if (!userId || !isPaidTier(tier))
         return;
+    const cycle = isBillingCycle(payment.cycle) ? payment.cycle : 'monthly';
     const startedAt = new Date();
-    const expiresAt = new Date(startedAt.getTime() + SUBSCRIPTION_MS);
+    const expiresAt = new Date(startedAt.getTime() + grantDays(tier, cycle) * DAY_MS);
     await db.collection('users').doc(userId).set({
         tier,
         subscriptionStatus: 'active',
         subscriptionStart: startedAt.toISOString(),
         subscriptionExpiresAt: expiresAt.toISOString(),
+        billingCycle: tier === 'pro' ? cycle : admin.firestore.FieldValue.delete(),
         lastPaymentId: paymentId,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -152,8 +155,9 @@ async function initiateSubscriptionPayment(input) {
     const userId = String(input.userId || '').replace(/\s+/g, '');
     if (!userId)
         throw new https_1.HttpsError('invalid-argument', 'Missing user account.');
+    const cycle = isBillingCycle(input.cycle) ? input.cycle : 'monthly';
     const phone = normalizePhone(input.phone);
-    const expectedAmount = getSubscriptionPrice(input.tier);
+    const expectedAmount = getSubscriptionPrice(input.tier, cycle);
     if (typeof input.amount === 'number' && input.amount !== expectedAmount) {
         throw new https_1.HttpsError('invalid-argument', 'Invalid ' + input.tier + ' amount.');
     }
@@ -166,6 +170,7 @@ async function initiateSubscriptionPayment(input) {
     const docRef = await db.collection('payments').add({
         userId,
         tier: input.tier,
+        cycle,
         phone,
         amount: expectedAmount,
         trigger: payload.trigger,
@@ -210,8 +215,8 @@ async function initiateSubscriptionPayment(input) {
 }
 // ── 1. Initiate STK Push ──────────────────────────────────
 exports.initiateStkPush = (0, https_1.onCall)({ cors: true }, async (request) => {
-    const { phone, amount, tier, userId, name } = request.data;
-    return await initiateSubscriptionPayment({ phone, amount, tier, userId, name });
+    const { phone, amount, tier, cycle, userId, name } = request.data;
+    return await initiateSubscriptionPayment({ phone, amount, tier, cycle, userId, name });
 });
 // Optional HTTP endpoint with the same shape as the Bongo deposit function.
 exports.deposit = (0, https_1.onRequest)({ cors: true }, async (req, res) => {

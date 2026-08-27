@@ -3,6 +3,7 @@ import { Ban, BookOpen, CalendarDays, ChartColumn, Gem, Home, Lightbulb, Minus, 
 import type { InvestmentAdvice, FinancialProfile, MonthlyBreakdown, IncomeStream, IncomeMode } from '../types';
 import { formatCurrency } from '../utils/expenses';
 import { getInvestmentAdvice } from '../utils/calculations';
+import { computeAdvisorInsights } from '../utils/advisorInsights';
 
 type IconComponent = React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
 
@@ -14,6 +15,17 @@ interface AdvisorProps {
   billsTotal?: number;
   goalsTotal?: number;
   breakdown?: MonthlyBreakdown;
+  // Real-data props — when the user has entered them, the Advisor shows a personalized
+  // insights panel (cashflow, action plan, net worth, goals) instead of just the guide.
+  hasData?: boolean;
+  monthlyDebt?: number;
+  debtTotal?: number;
+  investmentsTotal?: number;
+  netWorth?: number;
+  goalsSaved?: number;
+  goalsTarget?: number;
+  emergencyCurrent?: number;
+  emergencyTarget?: number;
 }
 
 const newStream = (): IncomeStream => ({ id: Date.now().toString(), label: '', amount: 0 });
@@ -24,7 +36,11 @@ const DEFAULT_DAYS_PER_WEEK = 6;
 const dailyToMonthly = (daily: number, daysPerWeek: number) =>
   Math.round(daily * daysPerWeek * WEEKS_PER_MONTH);
 
-export const Advisor: React.FC<AdvisorProps> = ({ profile, onUpdateIncome, billsTotal = 0, goalsTotal = 0, breakdown }) => {
+export const Advisor: React.FC<AdvisorProps> = ({
+  profile, onUpdateIncome, billsTotal = 0, goalsTotal = 0, breakdown,
+  hasData = false, monthlyDebt = 0, debtTotal = 0, investmentsTotal = 0,
+  netWorth = 0, goalsSaved = 0, goalsTarget = 0, emergencyCurrent = 0, emergencyTarget = 0,
+}) => {
   const initStreams = (): IncomeStream[] =>
     profile.incomeStreams?.length
       ? profile.incomeStreams
@@ -50,6 +66,13 @@ export const Advisor: React.FC<AdvisorProps> = ({ profile, onUpdateIncome, bills
   // Expenses only — byCategory holds expense categories; bills and goals are shown on their own rows below.
   const expensesOnly = breakdown ? Object.values(breakdown.byCategory).reduce((s, v) => s + v, 0) : 0;
   const actualSavings = income > 0 ? Math.max(0, income - actualSpend) : 0;
+
+  const insights = computeAdvisorInsights({
+    income, expenses: expensesOnly, bills: billsTotal, monthlyDebt, debtTotal,
+    investments: investmentsTotal, netWorth, goalsSaved, goalsTarget, emergencyCurrent, emergencyTarget,
+  });
+  const goalsPct = goalsTarget > 0 ? Math.min(100, Math.round((goalsSaved / goalsTarget) * 100)) : 0;
+  const efPct = emergencyTarget > 0 ? Math.min(100, Math.round((emergencyCurrent / emergencyTarget) * 100)) : 0;
 
   const applyStreams = () => {
     const valid = streams.filter(s => s.label.trim() && Number(s.amount) > 0);
@@ -248,6 +271,82 @@ export const Advisor: React.FC<AdvisorProps> = ({ profile, onUpdateIncome, bills
 
       {income > 0 ? (
         <>
+          {/* Personalized insights — shown once the user has real data */}
+          {hasData && (
+            <div style={S.allocationCard}>
+              <div style={S.cardTitle}><Sprout size={22} strokeWidth={2.1} style={S.titleIcon} /> Your money this month</div>
+
+              {/* Cashflow row */}
+              <div className="stats-grid" style={{ marginBottom: 16 }}>
+                {[
+                  { label: 'Money in', value: formatCurrency(income, 'KES'), color: 'var(--text-1)' },
+                  { label: 'Money out', value: formatCurrency(insights.outflow, 'KES'), color: 'var(--red)', sub: 'expenses + bills + loans' },
+                  { label: insights.surplus >= 0 ? 'Left over' : 'Shortfall', value: formatCurrency(Math.abs(insights.surplus), 'KES'), color: insights.surplus >= 0 ? 'var(--green)' : 'var(--red)' },
+                  { label: 'Savings rate', value: `${insights.savingsRatePct.toFixed(0)}%`, color: 'var(--blue)', sub: 'of income kept' },
+                ].map((s) => (
+                  <div key={s.label} style={S.miniCard}>
+                    <div style={S.miniLabel}>{s.label}</div>
+                    <div style={{ ...S.miniVal, color: s.color }}>{s.value}</div>
+                    {s.sub && <div style={S.miniSub}>{s.sub}</div>}
+                  </div>
+                ))}
+              </div>
+
+              {/* Position row: net worth, debt, emergency */}
+              <div className="three-col-grid" style={{ marginBottom: 18 }}>
+                <div style={S.miniCard}>
+                  <div style={S.miniLabel}>Net worth</div>
+                  <div style={{ ...S.miniVal, color: netWorth >= 0 ? 'var(--green)' : 'var(--red)' }}>{formatCurrency(netWorth, 'KES')}</div>
+                  <div style={S.miniSub}>{formatCurrency(investmentsTotal, 'KES')} invested</div>
+                </div>
+                <div style={S.miniCard}>
+                  <div style={S.miniLabel}>Total debt</div>
+                  <div style={{ ...S.miniVal, color: debtTotal > 0 ? 'var(--red)' : 'var(--green)' }}>{formatCurrency(debtTotal, 'KES')}</div>
+                  <div style={S.miniSub}>{insights.debtToIncomePct.toFixed(0)}% of income to repay</div>
+                </div>
+                <div style={S.miniCard}>
+                  <div style={S.miniLabel}>Emergency fund</div>
+                  <div style={{ ...S.miniVal, color: 'var(--gold)' }}>{insights.emergencyMonths.toFixed(1)} mo</div>
+                  <div style={S.miniSub}>{efPct}% of target</div>
+                </div>
+              </div>
+
+              {/* Goals progress */}
+              {goalsTarget > 0 && (
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--text-3)', marginBottom: 6 }}>
+                    <span>Savings goals</span>
+                    <span>{formatCurrency(goalsSaved, 'KES')} / {formatCurrency(goalsTarget, 'KES')} · {goalsPct}%</span>
+                  </div>
+                  <div style={{ height: 8, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${goalsPct}%`, background: 'linear-gradient(90deg, var(--green), #2BBA76)', borderRadius: 99 }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Action plan */}
+              {insights.tips.length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Your action plan</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {insights.tips.map((t, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', borderRadius: 10, background: t.kind === 'warn' ? 'var(--red-dim)' : t.kind === 'good' ? 'var(--green-dim)' : 'var(--bg-surface)', border: `1px solid ${t.kind === 'warn' ? 'var(--red-b)' : t.kind === 'good' ? 'var(--green-b)' : 'var(--border)'}` }}>
+                        <span style={{ marginTop: 1, flexShrink: 0, color: t.kind === 'warn' ? 'var(--red)' : t.kind === 'good' ? 'var(--green)' : 'var(--gold)' }}>
+                          {t.kind === 'warn' ? <Ban size={15} strokeWidth={2.3} /> : t.kind === 'good' ? <Shield size={15} strokeWidth={2.3} /> : <Lightbulb size={15} strokeWidth={2.3} />}
+                        </span>
+                        <span style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.5 }}>{t.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Generic income-based guidance (allocation, targets, tips) — only for users
+              who haven't entered their real data yet. Once they have, the personalized
+              panel above replaces all of it. */}
+          {!hasData && (<>
           {/* Allocation grid */}
           <div style={S.allocationCard}>
             <div style={S.cardTitle}>{isDaily ? 'How to split each day’s pay' : 'Recommended Monthly Allocation'}</div>
@@ -353,6 +452,7 @@ export const Advisor: React.FC<AdvisorProps> = ({ profile, onUpdateIncome, bills
               ))}
             </div>
           </div>
+          </>)}
 
           {/* Habits */}
           <div style={S.habitsCard}>
@@ -438,6 +538,10 @@ const S: Record<string, React.CSSProperties> = {
   daysValue: { minWidth: 28, textAlign: 'center', fontSize: 15, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'Karla, sans-serif' },
   dailyPreview: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '10px 14px', background: 'var(--gold-dim)', border: '1px solid var(--border-acc)', borderRadius: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 },
   allocationCard: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '26px 28px' },
+  miniCard:  { background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' },
+  miniLabel: { fontSize: 10.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 },
+  miniVal:   { fontFamily: 'Cormorant Garamond, serif', fontSize: 22, fontWeight: 700, lineHeight: 1.05 },
+  miniSub:   { fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 },
   allocSubtitle: { fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.6, margin: '-8px 0 18px' },
   allocUnit: { fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginLeft: 2 },
   allocItem: { display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: 'var(--bg-surface)', borderRadius: 10 },

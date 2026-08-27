@@ -3,7 +3,8 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { ArrowRight, Banknote, Check, CreditCard, Crown, Circle, Gem, LockKeyhole, PartyPopper, RotateCcw, Smartphone, Sparkles, X, XCircle, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { app } from '../lib/firebase';
-import type { SubscriptionTier } from '../types';
+import type { SubscriptionTier, BillingCycle } from '../types';
+import { PRO_PRICES, CYCLE_LABEL } from '../lib/pricing';
 
 interface PaymentGateProps {
   tierName: string;
@@ -12,9 +13,13 @@ interface PaymentGateProps {
   userId: string;
   userPhone: string;
   tier: SubscriptionTier;
+  initialCycle?: BillingCycle;
   onPaymentComplete: () => void;
   onBack: () => void;
 }
+
+const CYCLES: BillingCycle[] = ['daily', 'weekly', 'monthly'];
+const cycleSuffix: Record<BillingCycle, string> = { daily: '/day', weekly: '/week', monthly: '/month' };
 
 type Step = 'method' | 'awaiting' | 'success' | 'failed' | 'card';
 
@@ -28,21 +33,24 @@ const TIER_META: Record<SubscriptionTier, { name: string; color: string; icon: L
   silver:   { name: 'Silver',   color: '#C0C0C0', icon: Gem, features: ['Bills & recurring payments', 'Savings goals', 'Emergency fund', 'Net Worth'] },
   gold:     { name: 'Gold',     color: '#C9A84C', icon: Crown, features: ['Everything in Silver', 'Investments', 'Insights', 'AI Chat', 'Alerts & SOS', 'Priority support', 'CSV exports'] },
   platinum: { name: 'Platinum', color: '#A78BFA', icon: Sparkles, features: ['Legacy Platinum access', 'Everything in Gold', 'Priority support'] },
+  pro:      { name: 'Pro',      color: '#D97706', icon: Crown, features: ['AI Chat advisor', 'Insights & analytics', 'Investment tracker', 'Alerts & SOS', 'CSV exports', 'Unlimited goals & bills'] },
 };
 
-const INTRO_PRICE_END_MS = Date.parse('2026-06-30T20:59:59.999+03:00');
 const currentTierPrice = (tier: SubscriptionTier): number => {
-  const introPrices: Record<SubscriptionTier, number> = { free: 0, silver: 10, gold: 20, platinum: 999 };
-  const standardPrices: Record<SubscriptionTier, number> = { free: 0, silver: 299, gold: 599, platinum: 999 };
-  return Date.now() <= INTRO_PRICE_END_MS ? introPrices[tier] : standardPrices[tier];
+  const prices: Record<SubscriptionTier, number> = { free: 0, silver: 299, gold: 599, platinum: 999, pro: PRO_PRICES.monthly };
+  return prices[tier];
 };
 
 const SALE_TIERS: SubscriptionTier[] = ['silver', 'gold'];
 
 export const PaymentGate: React.FC<PaymentGateProps> = ({
-  tierName, tierPrice, tierColor, userId, userPhone, tier, onPaymentComplete, onBack,
+  tierName, tierPrice, tierColor, userId, userPhone, tier, initialCycle = 'monthly', onPaymentComplete, onBack,
 }) => {
   const [step, setStep] = useState<Step>('method');
+  const [cycle, setCycle] = useState<BillingCycle>(initialCycle);
+  // Pro is billed per cycle; legacy tiers keep their flat price.
+  const isProPlan = tier === 'pro';
+  const amount = isProPlan ? PRO_PRICES[cycle] : tierPrice;
   const [checkoutId, setCheckoutId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,7 +90,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({
     setConfirming(true);
     setError('');
     try {
-      const res = await confirmSubscriptionPayment({ checkoutId, userId, tier }) as { data: { status: string; message?: string } };
+      const res = await confirmSubscriptionPayment({ checkoutId, userId, tier, cycle }) as { data: { status: string; message?: string } };
       if (res.data.status === 'success' || res.data.status === 'paid') setStep('success');
       else setError(res.data.message || 'Payment is still awaiting provider confirmation.');
     } catch (e: unknown) {
@@ -96,7 +104,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({
     setLoading(true);
     setError('');
     try {
-      const res = await initiateStkPush({ phone: userPhone, amount: tierPrice, tier, userId, name: 'PesaFlow ' + tier }) as { data: { checkoutId: string } };
+      const res = await initiateStkPush({ phone: userPhone, amount, tier, cycle, userId, name: 'PesaFlow ' + tier }) as { data: { checkoutId: string } };
       setCheckoutId(res.data.checkoutId);
       setStep('awaiting');
     } catch (e: unknown) {
@@ -143,8 +151,8 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({
               <div style={S.planBoxLabel}>SUBSCRIBING TO</div>
               <div style={{ ...S.planBoxName, color: tierColor }}>{tierName}</div>
               <div style={S.planBoxPrice}>
-                KES <span style={S.planBoxAmt}>{tierPrice.toLocaleString()}</span>
-                <span style={S.planBoxPer}>/first month</span>
+                KES <span style={S.planBoxAmt}>{amount.toLocaleString()}</span>
+                <span style={S.planBoxPer}>{isProPlan ? cycleSuffix[cycle] : '/first month'}</span>
               </div>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -173,6 +181,33 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({
             <div className="pg-in">
               <div style={S.title}>Complete your subscription</div>
               <p style={S.sub}>Choose how you'd like to pay for <strong style={{ color: tierColor }}>{tierName}</strong></p>
+
+              {/* Billing cycle picker (Pro only) */}
+              {isProPlan && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:18 }}>
+                  {CYCLES.map(c => {
+                    const active = cycle === c;
+                    return (
+                      <button
+                        key={c}
+                        onClick={() => setCycle(c)}
+                        style={{
+                          position:'relative', display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                          padding:'12px 6px', borderRadius:10, cursor:'pointer',
+                          border: active ? '1.5px solid #D97706' : '1px solid var(--border,#e5e7eb)',
+                          background: active ? 'rgba(217,119,6,0.06)' : 'var(--bg-surface,#f9fafb)',
+                        }}
+                      >
+                        {c === 'monthly' && <span style={{ position:'absolute', top:-8, fontSize:8.5, fontWeight:800, letterSpacing:'.05em', color:'#0A1628', background:'linear-gradient(135deg,#F59E0B,#D97706)', padding:'2px 7px', borderRadius:999 }}>BEST</span>}
+                        <span style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'.04em', color:'var(--text-3,#9CA3AF)' }}>{CYCLE_LABEL[c]}</span>
+                        <span style={{ fontSize:17, fontWeight:800, color: active ? '#D97706' : 'var(--text-1,#0A1628)' }}>KES {PRO_PRICES[c]}</span>
+                        <span style={{ fontSize:10, color:'var(--text-3,#9CA3AF)' }}>{cycleSuffix[c]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:20 }}>
                 <button className="pg-method" style={S.methodBtn} onClick={handleSendStk} disabled={loading || !userPhone}>
                   <div style={{ display:'flex', alignItems:'center', gap:14 }}>
@@ -207,7 +242,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({
               <div style={S.title}>Awaiting Payment</div>
               <p style={S.sub}>
                 Check your phone <strong>{userPhone}</strong> and enter your M-Pesa PIN to complete the payment of{' '}
-                <strong style={{ color:'#D97706' }}>KES {tierPrice.toLocaleString()}</strong>
+                <strong style={{ color:'#D97706' }}>KES {amount.toLocaleString()}</strong>
               </p>
               <div style={{ display:'flex', gap:6, alignItems:'center' }}>
                 <div className="pulse-dot" style={{ width:8, height:8, borderRadius:'50%', background:'#C9A84C' }} />
@@ -280,7 +315,7 @@ export const PaymentGate: React.FC<PaymentGateProps> = ({
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {SALE_TIERS.filter(t => t !== tier).map(t => {
                     const m = TIER_META[t];
-                    const prices: Record<SubscriptionTier, number> = { free: 0, silver: currentTierPrice('silver'), gold: currentTierPrice('gold'), platinum: currentTierPrice('platinum') };
+                    const prices: Record<SubscriptionTier, number> = { free: 0, silver: currentTierPrice('silver'), gold: currentTierPrice('gold'), platinum: currentTierPrice('platinum'), pro: currentTierPrice('pro') };
                     const MIcon = m.icon;
                     return (
                       <div key={t} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'var(--bg-surface)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 14px' }}>

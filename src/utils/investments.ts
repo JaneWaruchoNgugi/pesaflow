@@ -1,7 +1,7 @@
 import type{ InvestmentCategory, InvestmentCategoryMeta, Investment, InvestmentSummary } from '../types';
 import {
   PiggyBank, LineChart, TrendingUp, Landmark, Building2, Bitcoin,
-  Palmtree, Wallet, Lock, Shapes,
+  Palmtree, Wallet, Lock, Shapes, Umbrella,
 } from 'lucide-react';
 
 export const INVESTMENT_META: Record<InvestmentCategory, InvestmentCategoryMeta> = {
@@ -77,6 +77,14 @@ export const INVESTMENT_META: Record<InvestmentCategory, InvestmentCategoryMeta>
     riskLevel: 'low',
     description: 'Locked bank deposits for fixed terms',
   },
+  insurance: {
+    label: 'Insurance / Endowment',
+    color: '#8B5CF6',
+    icon: Umbrella,
+    avgReturn: 7,
+    riskLevel: 'low',
+    description: 'Endowment & anticipated endowment policies (ICEA, Britam) — savings with cover',
+  },
   other: {
     label: 'Other',
     color: '#94A3B8',
@@ -104,10 +112,15 @@ export const calculateInvestmentSummary = (
   let totalInvested = 0;
   let weightedReturn = 0;
 
+  // A holding is worth what has actually accumulated in it (savedAmount) — the `amount`
+  // field is the contribution (e.g. monthly), not the current value.
+  const holdingValue = (inv: Investment) => (inv.savedAmount ?? 0) > 0 ? inv.savedAmount! : inv.amount;
+
   for (const inv of active) {
-    byCategory[inv.category] = (byCategory[inv.category] || 0) + inv.amount;
-    totalInvested += inv.amount;
-    weightedReturn += inv.amount * (inv.expectedReturnPct / 100);
+    const value = holdingValue(inv);
+    byCategory[inv.category] = (byCategory[inv.category] || 0) + value;
+    totalInvested += value;
+    weightedReturn += value * (inv.expectedReturnPct / 100);
   }
 
   const projectedAnnualReturn = totalInvested > 0 ? weightedReturn : 0;

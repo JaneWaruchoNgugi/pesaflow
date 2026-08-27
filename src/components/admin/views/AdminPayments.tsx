@@ -30,7 +30,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const TIER_COLOR: Record<SubscriptionTier, string> = {
-  free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA',
+  free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA', pro: '#D97706',
 };
 
 const toMillis = (value: unknown): number => {

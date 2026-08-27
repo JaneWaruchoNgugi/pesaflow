@@ -159,20 +159,26 @@ input,select,textarea { font-family:'DM Sans',sans-serif; outline:none; font-siz
 .main-with-sidebar { margin-left:240px; flex:1; min-width:0; display:flex; flex-direction:column; transition:margin-left .25s cubic-bezier(.4,0,.2,1); }
 .main-with-sidebar.collapsed { margin-left:72px; }
 
-/* Topbar */
+/* Topbar — offset past the fixed sidebar so it aligns with the content column. */
 .fw-topbar {
   position:sticky; top:0; z-index:150;
+  margin-left:240px;
   background:var(--topbar-bg);
   border-bottom:1px solid var(--topbar-b);
   backdrop-filter:blur(20px) saturate(180%);
   -webkit-backdrop-filter:blur(20px) saturate(180%);
-  transition:box-shadow .2s,background .3s;
+  transition:box-shadow .2s,background .3s,margin-left .25s cubic-bezier(.4,0,.2,1);
 }
 .fw-topbar.scrolled { box-shadow:var(--shadow); }
-.fw-topbar-inner { height:58px; display:flex; align-items:center; gap:12px; padding:0 22px; }
+.fw-topbar-inner { height:58px; display:flex; align-items:center; gap:12px; padding:0 22px; max-width:1280px; margin:0 auto; width:100%; }
 
-/* Main content */
-.main-content { flex:1; padding:26px 28px; max-width:1200px; width:100%; margin:0 auto; }
+/* Main content — offset past the fixed sidebar; inner column is capped + centred. */
+.main-content { flex:1; padding:26px 28px; margin-left:240px; transition:margin-left .25s cubic-bezier(.4,0,.2,1); }
+.main-content-inner { max-width:1280px; margin:0 auto; width:100%; }
+
+/* Follow the sidebar when it is collapsed (sidebar + topbar + main are siblings). */
+.fw-sidebar.collapsed ~ .fw-topbar,
+.fw-sidebar.collapsed ~ .main-content { margin-left:72px; }
 
 /* ═══════════════════════════════════════════════
    ANIMATIONS
@@ -236,6 +242,24 @@ input,select,textarea { font-family:'DM Sans',sans-serif; outline:none; font-siz
 .inv-form-grid      { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
 .sos-grid           { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; }
 .ef-kpi-row         { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+
+/* Form grids inside a modal: 2 shrink-safe columns (minmax(0,1fr) stops overflow),
+   collapsing to one column on narrow screens. Fixes the horizontal-scroll on the
+   Add Expense / Add Bill / Add Investment popups. */
+.fw-modal .form-grid,
+.fw-modal .bills-form-grid,
+.fw-modal .goals-form-grid,
+.fw-modal .inv-form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.fw-modal .form-grid > *,
+.fw-modal .bills-form-grid > *,
+.fw-modal .goals-form-grid > *,
+.fw-modal .inv-form-grid > * { min-width:0; }
+@media (max-width:520px) {
+  .fw-modal .form-grid,
+  .fw-modal .bills-form-grid,
+  .fw-modal .goals-form-grid,
+  .fw-modal .inv-form-grid { grid-template-columns:1fr; }
+}
 .ef-two-col         { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .alerts-form-grid   { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
 .alerts-compose-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
@@ -339,7 +363,7 @@ input,select,textarea { font-family:'DM Sans',sans-serif; outline:none; font-siz
 /* ═══════════════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════════════ */
-@media (max-width:1280px) { .fw-sidebar{width:200px} .main-with-sidebar{margin-left:200px} }
+@media (max-width:1280px) { .fw-sidebar{width:200px} .main-with-sidebar,.main-content,.fw-topbar{margin-left:200px} }
 
 @media (max-width:1100px) {
   .fw-sidebar{width:72px!important}
@@ -347,7 +371,7 @@ input,select,textarea { font-family:'DM Sans',sans-serif; outline:none; font-siz
   .fw-sidebar .fw-sidebar-hd{padding:20px 0 16px!important;justify-content:center!important}
   .fw-sidebar .fw-navbtn{justify-content:center!important;padding:12px 0!important}
   .fw-sidebar .fw-sec-lbl{opacity:0!important}
-  .main-with-sidebar,.main-with-sidebar.collapsed{margin-left:72px!important}
+  .main-with-sidebar,.main-with-sidebar.collapsed,.main-content,.fw-topbar,.fw-sidebar.collapsed ~ .main-content,.fw-sidebar.collapsed ~ .fw-topbar{margin-left:72px!important}
 }
 
 @media (max-width:960px) {
@@ -357,7 +381,7 @@ input,select,textarea { font-family:'DM Sans',sans-serif; outline:none; font-siz
   .fw-sidebar .fw-navbtn{justify-content:flex-start!important;padding:10px 12px!important}
   .fw-sidebar .fw-sec-lbl{opacity:1!important}
   .fw-sidebar.mobile-open{transform:translateX(0)!important;box-shadow:0 24px 60px rgba(0,0,0,.6)!important}
-  .main-with-sidebar,.main-with-sidebar.collapsed{margin-left:0!important}
+  .main-with-sidebar,.main-with-sidebar.collapsed,.main-content,.fw-topbar,.fw-sidebar.collapsed ~ .main-content,.fw-sidebar.collapsed ~ .fw-topbar{margin-left:0!important}
   .fw-bottom-nav{display:block}
   .main-content{padding:18px 16px 86px}
   .fw-topbar-inner{padding:0 16px}

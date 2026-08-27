@@ -1,14 +1,18 @@
 import type { AppView, SubscriptionTier } from '../types';
 
-// The advanced tools that remain behind the (not-yet-launched) Gold plan.
-// Everything else is free for everyone while we grow the user base.
-export const GOLD_VIEWS: AppView[] = ['investments', 'insights', 'chat', 'alerts'];
+// The "intelligence & automation" views that require Pro. Everything else
+// (core money tracking + the learning hub) stays free.
+export const PRO_VIEWS: AppView[] = ['investments', 'insights', 'chat', 'alerts'];
 
-// Explicit map so every tier resolves safely. Free/Silver members can use
-// everything except the Gold tools; Gold/Platinum keep full access (admin/testing).
+// Views locked per tier. Only Free is gated; any paid tier — Pro, plus the
+// grandfathered legacy silver/gold/platinum — keeps full access.
 export const PLAN_LOCKED_VIEWS: Record<SubscriptionTier, AppView[]> = {
-  free: GOLD_VIEWS,
-  silver: GOLD_VIEWS,
+  free: PRO_VIEWS,
+  silver: [],
   gold: [],
   platinum: [],
+  pro: [],
 };
+
+// Backwards-compatible alias (older imports referenced GOLD_VIEWS).
+export const GOLD_VIEWS = PRO_VIEWS;

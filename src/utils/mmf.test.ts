@@ -1,5 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { estimateMMF } from './mmf';
+import { estimateMMF, projectMMF } from './mmf';
+
+describe('projectMMF (initial + monthly top-ups + compounding frequency)', () => {
+  it('sums total contributions as initial + monthly top-up × months', () => {
+    const r = projectMMF(100, 2000, 11, 'daily', 1);
+    expect(r.months).toBe(12);
+    expect(r.totalContributions).toBe(100 + 2000 * 12); // 24,100
+  });
+
+  it('projects a growing balance above contributions (daily, 1 year)', () => {
+    const r = projectMMF(100, 2000, 11, 'daily', 1);
+    // ~KES 25.3k–25.5k depending on timing convention; must exceed contributions.
+    expect(r.futureValue).toBeGreaterThan(25_300);
+    expect(r.futureValue).toBeLessThan(25_600);
+    expect(r.grossInterest).toBeCloseTo(r.futureValue - r.totalContributions, 6);
+  });
+
+  it('higher compounding frequency yields slightly more', () => {
+    const annually = projectMMF(100, 2000, 11, 'annually', 1).futureValue;
+    const daily = projectMMF(100, 2000, 11, 'daily', 1).futureValue;
+    expect(daily).toBeGreaterThan(annually);
+  });
+
+  it('applies 15% WHT to interest only', () => {
+    const r = projectMMF(100, 2000, 11, 'daily', 1, 15);
+    expect(r.taxPaid).toBeCloseTo(r.grossInterest * 0.15, 6);
+    expect(r.netValue).toBeCloseTo(r.futureValue - r.taxPaid, 6);
+  });
+});
 
 describe('estimateMMF', () => {
   it('returns the principal untouched when duration is zero', () => {
@@ -28,6 +56,20 @@ describe('estimateMMF', () => {
     const r = estimateMMF(50_000, 10, 24, 0);
     expect(r.taxPaid).toBe(0);
     expect(r.netValue).toBe(r.grossValue);
+  });
+
+  it('applies the FULL duration — 12 months is ~12x a single month, not one month', () => {
+    const one = estimateMMF(50_000, 11, 1, 0);
+    const twelve = estimateMMF(50_000, 11, 12, 0);
+    expect(Math.round(one.grossInterest)).toBe(460);
+    expect(Math.round(twelve.grossInterest)).toBe(5813);
+    // Compounded, so slightly MORE than exactly 12x the first month.
+    expect(twelve.grossInterest).toBeGreaterThan(one.grossInterest * 12);
+  });
+
+  it('reads years as 12x months at the call site convention (2 years = 24 months)', () => {
+    const twoYears = estimateMMF(50_000, 11, 24, 0);
+    expect(Math.round(twoYears.grossInterest)).toBe(12302);
   });
 
   it('guards against negative inputs', () => {

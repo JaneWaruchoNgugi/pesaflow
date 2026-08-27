@@ -107,6 +107,10 @@ interface HeaderProps {
   // Menu-only mode for the public blog: keep the nav (sidebar + bottom nav) but hide
   // the account-specific chrome (financial score, subscription bell, user menu/exports).
   minimal?:            boolean;
+  // Guest (not signed in): show Sign up / Log in in the topbar instead of the account chrome.
+  isGuest?:            boolean;
+  onSignUp?:           () => void;
+  onLogin?:            () => void;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -127,6 +131,9 @@ export const Header: React.FC<HeaderProps> = ({
                                                 subscriptionNotice = null,
                                                 onOpenUpgrade,
                                                 minimal = false,
+                                                isGuest = false,
+                                                onSignUp,
+                                                onLogin,
                                               }) => {
   const { theme, toggleTheme } = useTheme();
   const scoreColor = SCORE_COLOR[scoreLevel] ?? 'var(--text-3)';
@@ -345,8 +352,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Footer */}
           <div className="fw-sidebar-footer">
-            {/* Score pill (hidden in menu-only/blog mode) */}
-            {!minimal && (
+            {/* Score pill (hidden in menu-only/blog mode & for guests) */}
+            {!minimal && !isGuest && (
             <div className="fw-score-pill">
               {scoreRing(36)}
               <div className="fw-reveal fw-score-info">
@@ -406,8 +413,16 @@ export const Header: React.FC<HeaderProps> = ({
               {theme === 'dark' ? <Sun size={16} strokeWidth={2.2} /> : <Moon size={16} strokeWidth={2.2} />}
             </button>
 
-            {/* Subscription notice (hidden in menu-only/blog mode) */}
-            {!minimal && (
+            {/* Guests: Sign up / Log in instead of the account chrome */}
+            {!minimal && isGuest && (
+              <>
+                <button className="fw-auth-btn fw-auth-ghost" onClick={onLogin}>Log in</button>
+                <button className="fw-auth-btn fw-auth-primary" onClick={onSignUp}>Sign up</button>
+              </>
+            )}
+
+            {/* Subscription notice (hidden in menu-only/blog mode & for guests) */}
+            {!minimal && !isGuest && (
             <button
                 className={`fw-notice-btn${subscriptionNotice ? ' has-notice' : ''}`}
                 onClick={onOpenUpgrade}
@@ -419,8 +434,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             )}
 
-            {/* Score ring (topbar) — hidden in menu-only/blog mode */}
-            {!minimal && (
+            {/* Score ring (topbar) — hidden in menu-only/blog mode & for guests */}
+            {!minimal && !isGuest && (
             <div className="fw-tbar-score" style={{ color: scoreColor }}>
               {scoreRing(24)}
               <div className="fw-tbar-score-text">
@@ -430,8 +445,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             )}
 
-            {/* User menu (hidden in menu-only/blog mode) */}
-            {!minimal && (
+            {/* User menu (hidden in menu-only/blog mode & for guests) */}
+            {!minimal && !isGuest && (
             <div style={{ position: 'relative' }} ref={menuRef}>
               <button
                   className="fw-user-btn"
@@ -600,6 +615,11 @@ export const Header: React.FC<HeaderProps> = ({
         .fw-ham:hover { border-color:var(--border-acc); }
         .fw-page-title { font-family:'Cormorant Garamond',serif; font-size:19px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .fw-tbar-theme-btn { width:34px; height:34px; border-radius:9px; background:var(--bg-surface); border:1px solid var(--border); font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:border-color .15s; }
+        .fw-auth-btn { padding:7px 15px; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; flex-shrink:0; white-space:nowrap; transition:all .15s; }
+        .fw-auth-ghost { background:transparent; border:1px solid var(--border-s); color:var(--text-2); }
+        .fw-auth-ghost:hover { border-color:var(--border-acc); color:var(--gold); }
+        .fw-auth-primary { border:none; background:linear-gradient(135deg,var(--gold),var(--gold-l)); color:#0A1628; box-shadow:0 2px 10px var(--gold-glow); }
+        .fw-auth-primary:hover { filter:brightness(1.05); }
         .fw-tbar-theme-btn:hover { border-color:var(--border-acc); }
         .fw-tbar-score { display:flex; align-items:center; gap:7px; padding:5px 11px; border-radius:30px; border:1px solid var(--border); background:var(--bg-surface); flex-shrink:0; }
         .fw-tbar-score-text { display:flex; flex-direction:column; }

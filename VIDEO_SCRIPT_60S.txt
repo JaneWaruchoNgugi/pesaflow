@@ -1,0 +1,55 @@
+PESAFLOW — 60-SECOND VIDEO SCRIPT (SOCIAL / REELS / TIKTOK)
+===========================================================
+Tone: real, youthful, a little Sheng — like a friend talking, not an ad.
+Format: VO = voiceover, ON-SCREEN = text overlay, VISUAL = what we see.
+Total: ~60s. Shoot vertical (9:16). Fast cuts. Real phone footage.
+
+
+[0:00–0:06]  THE HOOK
+  VISUAL: Young person checking M-Pesa balance, face drops.
+  VO: "It's mid-month. You've been hustling every day... so why are you
+       already broke?"
+  ON-SCREEN: "Where did the money go?"
+
+[0:06–0:16]  THE PAIN (make them feel seen)
+  VISUAL: Quick cuts — fare, lunch, data bundle, a Betika slip, a Fuliza SMS.
+  VO: "Small small — fare, bundles, that bet, lunch... then boom, Fuliza.
+       You borrow, you repay, you borrow again."
+  ON-SCREEN: "The cycle nobody talks about."
+
+[0:16–0:22]  THE TURN
+  VISUAL: Hand opens the PesaFlow app.
+  VO: "What if you could actually SEE your money — before it disappears?"
+  ON-SCREEN: "Meet PesaFlow."
+
+[0:22–0:38]  THE MIRROR + DEMO (show, don't tell)
+  VISUAL: Screen-record — log an M-Pesa expense in 3 seconds; the spending
+          breakdown lights up; the "leak" is obvious.
+  VO: "Log what you spend in seconds. PesaFlow shows you exactly where your
+       money is leaking. No lectures — just the truth, in your language."
+  ON-SCREEN: "Your M-Pesa doesn't lie."
+
+[0:38–0:50]  THE PATH (aspiration flip)
+  VISUAL: Setting a goal — "Plot deposit" / "Emergency fund" — bar filling up.
+  VO: "Built for how WE earn — daily, from side hustles. Save small, build
+       an emergency fund, and start working towards that plot or biz."
+  ON-SCREEN: "From surviving -> building."
+
+[0:50–0:57]  TRUST + PRICE
+  VISUAL: App on phone, clean and calm.
+  VO: "It's free to start. Your data stays yours — we never sell it."
+  ON-SCREEN: "Free. Private. Yours."
+
+[0:57–1:00]  CALL TO ACTION
+  VISUAL: Logo + tagline.
+  VO: "PesaFlow. Track your money. Grow your wealth. Sleep better."
+  ON-SCREEN: "Try it free -> [pesaflow-hazel.vercel.app]"
+
+
+PRODUCTION TIPS
+---------------
+- The demo section is the star — make the screen-record crisp and fast.
+- Use real Kenyan settings (matatu, kibanda, hustle scenes) — authenticity sells.
+- Keep captions ON (most watch muted).
+- Cut a 15s version for ads: Hook (0:00–0:06) + Mirror (0:22–0:32) + CTA.
+- Swap the CTA URL for your real domain / app-store link before posting.

@@ -1,0 +1,81 @@
+PESAFLOW — PITCH DECK OUTLINE
+=============================
+12 slides. Keep each slide to ONE idea and few words. Talk to the pain,
+demo the product live, then show the business. Speaker notes in [ ].
+
+
+SLIDE 1 — TITLE / HOOK
+  PesaFlow
+  "Track your money. Grow your wealth. Sleep better."
+  [Open spoken: "How many of you are broke by mid-month even though you're
+   hustling every day?" Let it land. That's the whole pitch.]
+
+SLIDE 2 — THE PROBLEM
+  Young Kenyans are earning — but broke by mid-month.
+  - Money comes from the hustle... and vanishes.
+  - One emergency = straight to Fuliza.
+  - Borrow, repay, borrow again. Then CRB lists you.
+  [Say it as their reality, not statistics. Make them feel seen.]
+
+SLIDE 3 — WHY THIS, WHY NOW
+  - Millions of youth earn irregular "hustle" income, not salaries.
+  - M-Pesa is how everyone moves money — but no one SEES their money.
+  - Digital loans + betting quietly drain wallets daily.
+  - Nobody was ever taught how to manage money.
+  [The moment is now: mobile-money native, financially anxious generation.]
+
+SLIDE 4 — THE SOLUTION
+  PesaFlow — the money app built for how young Kenyans actually earn.
+  See where your money goes -> stop the leaks -> save small -> build wealth.
+  [One sentence. Don't over-explain — the demo does the talking.]
+
+SLIDE 5 — LIVE DEMO (the heart of the pitch)
+  Show, don't tell:
+  1. Log an M-Pesa expense in seconds.
+  2. See the "money leak" instantly.
+  3. Set a goal (plot / capital / emergency fund) and watch it grow.
+  [A 30-second live demo beats ten slides. Rehearse it cold.]
+
+SLIDE 6 — THE DIFFERENTIATOR
+  "Built for the hustle, not the payslip."
+  - Handles daily / irregular / multi-hustle income (most apps can't).
+  - M-Pesa native. In your language. Free to start.
+  [This is the line no competitor owns. Repeat it.]
+
+SLIDE 7 — WHO IT'S FOR
+  Every young Kenyan with a hustle and an M-Pesa line.
+  Students, boda riders, freelancers, small biz, gig workers, first-jobbers.
+  [Huge, underserved, mobile-first market.]
+
+SLIDE 8 — HOW IT MAKES MONEY
+  Core budgeting stays FREE (that's the trust + growth engine). Revenue:
+  - M-Pesa "sachet" micro-subscriptions (cheap weekly/annual).
+  - Vetted referrals: money-market funds, SACCOs, insurance (aligned —
+    we earn when users build wealth, never from their desperation).
+  - B2B / white-label for SACCOs, chamas, employers (they pay, member
+    gets it free) — the scalable revenue.
+  [Emphasize: we win when the mwananchi wins.]
+
+SLIDE 9 — TRACTION & ROADMAP
+  - Live app: expenses, advisor, goals, bills, net worth, emergency fund.
+  - Web + Android + iOS. Google + email sign-in. M-Pesa payments wired.
+  - Next: sachet pricing, one SACCO partnership, MMF referral.
+  [Show it's real and shipping, not a slide-ware idea.]
+
+SLIDE 10 — TRUST & COMPLIANCE
+  A money app lives or dies on trust.
+  - We do NOT sell your data. Your data stays yours.
+  - Plain-language privacy policy + versioned consent (Data Protection
+    Act 2019). ODPC registration in progress.
+  [Turn compliance into a selling point, not fine print.]
+
+SLIDE 11 — THE TEAM / FOUNDER
+  Who you are + why you'll win.
+  [Relatability is your edge: you're building for a reality you live.
+   If solo, lean into founder-market fit.]
+
+SLIDE 12 — THE VISION / THE ASK
+  From "broke till end month" to a generation that builds wealth.
+  The ask: [partnership / pilot SACCO / funding / users — pick ONE clear ask].
+  "Track your money. Grow your wealth. Sleep better."
+  [End on the tagline and one specific next step.]

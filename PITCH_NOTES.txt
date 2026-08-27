@@ -1,0 +1,77 @@
+PESAFLOW — PITCH NOTES (KENYAN YOUTH)
+=====================================
+
+DON'T lead with "budgeting app" — that word makes people's eyes glaze.
+LEAD with the emotional truth every young Kenyan lives:
+  "Money comes in from the hustle... and disappears. You're working, but
+   you have nothing to show for it, and you're one emergency away from
+   Fuliza."
+That's the wound. PesaFlow is the answer.
+
+STRUCTURE THE WHOLE PITCH AS: PAIN -> MIRROR -> PATH
+  1. Name the pain they feel (money vanishes, the Fuliza cycle).
+  2. Show the mirror (the app reveals the truth with their own numbers).
+  3. Offer the path (control -> savings -> wealth).
+Youth pitches die when you lead with features; they land when you lead
+with THEIR reality and make them feel seen.
+
+
+THE THEMES THAT ACTUALLY LAND
+-----------------------------
+
+1. "BUILT FOR THE HUSTLE, NOT THE PAYSLIP" — your sharpest angle
+   Most young Kenyans don't earn a fixed salary — they earn from boda,
+   mitumba, freelance, content, small biz, casual gigs. Every foreign
+   budgeting app assumes a monthly payslip and feels useless to them.
+   PesaFlow already supports irregular/daily income streams — lean into
+   this hard.
+   Line: "The first money app that gets how you actually earn — daily,
+   irregular, from three hustles at once." No competitor owns this message.
+
+2. ESCAPE THE FULIZA / LOAN-APP TRAP (AND STAY OFF CRB)
+   The deepest fear and daily reality. Fuliza, Tala, Branch, KCB-Mpesa —
+   borrow to survive, repay, borrow again. Being listed on CRB blocks
+   loans, some jobs, everything.
+   Line: "See exactly where your money leaks, build a small emergency
+   fund, and stop living on Fuliza — before CRB lists you." Control
+   instead of borrowing.
+
+3. THE MIRROR: WHERE YOUR MONEY REALLY GOES (YES, INCLUDING BETTING)
+   Aviator, Betika, SportPesa quietly drain youth wallets, plus
+   "soft life" / flex-culture spending. Don't preach — SHOW them the
+   truth with their own numbers.
+   Line: "Your M-Pesa doesn't lie. See what's really eating your money."
+   People change when they see it, not when they're lectured.
+
+4. FROM SURVIVING -> BUILDING (the aspiration flip)
+   After the pain, sell the dream every youth has: a plot, a business,
+   capital, freedom from black-tax pressure. Goals + emergency fund +
+   net worth turn "broke till end month" into "I'm building something."
+   Line (your own tagline — it's good): "Track your money. Grow your
+   wealth. Sleep better."
+
+5. THE MONEY COACH NOBODY GAVE THEM
+   School never taught this. Frame the advisor/AI as a pocket financial
+   coach that speaks their language (Swahili/Sheng), free, no shame,
+   no bank manager judging them.
+
+
+WHAT TO AVOID IN THE PITCH
+--------------------------
+- Don't say "financial discipline" — sounds like a scolding parent.
+  Say "control" and "clarity."
+- Don't over-explain features — one live demo of "log an M-Pesa expense
+  -> see your leak" beats ten slides.
+- Don't ignore trust — money app = "will you steal my data / my money?"
+  Address it head-on: free, your data stays yours, we don't sell it
+  (the privacy policy backs this up — use it as a trust point).
+
+
+A 20-SECOND VERSION YOU CAN ACTUALLY SAY
+----------------------------------------
+"Most young Kenyans are hustling hard but broke by mid-month — money
+ comes, money vanishes, and one emergency sends you straight to Fuliza.
+ PesaFlow is the first money app built for how we actually earn — daily,
+ from side hustles — that shows you exactly where your money goes, helps
+ you save small, and turns 'broke till end month' into building a plot or
+ a business. Free, in your language, your data stays yours."

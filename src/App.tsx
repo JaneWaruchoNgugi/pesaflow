@@ -371,48 +371,48 @@ const MainApp: React.FC = () => {
           )}
 
           {/* ── Investments ─────────────────────────────────────── */}
-          {activeView === 'investments' && (
+          {activeView === 'investments' && (isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} /> :
             <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Free tool — available to every tier, sits above the paywall */}
+              {/* MMF estimator — a free tool, also handy alongside the portfolio tracker */}
               <MMFCalculator />
-              {isLocked('investments') ? <UpgradeWall view="investments" userTier={userTier} /> : (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button style={exportBtnStyle} onClick={() => exportInvestmentsToCSV(investments)}>
-                      <Download size={14} strokeWidth={2.2} /> Export CSV
-                    </button>
-                  </div>
-                  <InvestmentSummaryBar summary={investmentSummary} monthlyIncome={profile.monthlyIncome} />
-                  {investmentSummary.activeCount > 0 && <PortfolioAllocation summary={investmentSummary} />}
-                  <InvestmentForm onAdd={addInvestment} />
-                  <InvestmentList
-                    investments={investments}
-                    onRemove={removeInvestment}
-                    onUpdateStatus={updateStatus}
-                    currency={profile.currency}
-                  />
-                </>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button style={exportBtnStyle} onClick={() => exportInvestmentsToCSV(investments)}>
+                  <Download size={14} strokeWidth={2.2} /> Export CSV
+                </button>
+              </div>
+              <InvestmentSummaryBar summary={investmentSummary} monthlyIncome={profile.monthlyIncome} />
+              {investmentSummary.activeCount > 0 && <PortfolioAllocation summary={investmentSummary} />}
+              <InvestmentForm onAdd={addInvestment} />
+              <InvestmentList
+                investments={investments}
+                onRemove={removeInvestment}
+                onUpdateStatus={updateStatus}
+                currency={profile.currency}
+              />
             </div>
           )}
 
-          {/* ── Goals ───────────────────────────────────────────── */}
+          {/* ── Goals (labeled "Investments" in the nav) ────────── */}
           {activeView === 'goals' && (isLocked('goals') ? <UpgradeWall view="goals" userTier={userTier} /> :
-            <Goals
-              goals={goals.goals}
-              activeGoals={goals.activeGoals}
-              completedGoals={goals.completedGoals}
-              totalTargeted={goals.totalTargeted}
-              totalSaved={goals.totalSaved}
-              onAdd={goals.addGoal}
-              onRemove={goals.removeGoal}
-              onContribute={goals.contribute}
-              onUpdateSaved={goals.updateSaved}
-              onUpdate={goals.updateGoal}
-              currency={profile.currency}
-              maxGoals={undefined}
-              onUpgrade={() => setActiveView('upgrade')}
-            />
+            <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* MMF Return Estimator — free tool, reachable by every tier here */}
+              <MMFCalculator />
+              <Goals
+                goals={goals.goals}
+                activeGoals={goals.activeGoals}
+                completedGoals={goals.completedGoals}
+                totalTargeted={goals.totalTargeted}
+                totalSaved={goals.totalSaved}
+                onAdd={goals.addGoal}
+                onRemove={goals.removeGoal}
+                onContribute={goals.contribute}
+                onUpdateSaved={goals.updateSaved}
+                onUpdate={goals.updateGoal}
+                currency={profile.currency}
+                maxGoals={undefined}
+                onUpgrade={() => setActiveView('upgrade')}
+              />
+            </div>
           )}
 
           {/* ── Bills ───────────────────────────────────────────── */}

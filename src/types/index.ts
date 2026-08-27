@@ -78,13 +78,13 @@ export interface MonthlyBreakdown {
 export type AppView =
     | 'dashboard' | 'expenses' | 'insights' | 'advisor'
     | 'investments' | 'goals' | 'bills' | 'networth' | 'chat'
-    | 'emergency' | 'alerts' | 'upgrade' | 'profile';
+    | 'emergency' | 'alerts' | 'upgrade' | 'profile' | 'tools';
 
 // ─── Investment types ──────────────────────────────────────
 
 export type InvestmentCategory =
     | 'sacco' | 'mmf' | 'stocks' | 'bonds' | 'realEstate'
-    | 'crypto' | 'pension' | 'savingsAccount' | 'fixedDeposit' | 'other';
+    | 'crypto' | 'pension' | 'savingsAccount' | 'fixedDeposit' | 'insurance' | 'other';
 
 export type InvestmentStatus = 'active' | 'matured' | 'withdrawn';
 
@@ -98,6 +98,9 @@ export interface Investment {
   notes: string;
   status: InvestmentStatus;
   isRecurring: boolean;
+  termMonths?: number;  // how long you're saving/investing (0/undefined = open-ended)
+  locked?: boolean;     // funds locked until maturity (fixed deposit, endowment, etc.)
+  savedAmount?: number; // how much has already been accumulated so far (optional)
 }
 
 export interface InvestmentCategoryMeta {
@@ -257,7 +260,10 @@ export interface LiabilityCategoryMeta {
 
 // ─── Auth ─────────────────────────────────────────────────
 
-export type SubscriptionTier = 'free' | 'silver' | 'gold' | 'platinum';
+export type SubscriptionTier = 'free' | 'silver' | 'gold' | 'platinum' | 'pro';
+
+// Pro can be bought on any of these billing cycles (see lib/pricing.ts).
+export type BillingCycle = 'daily' | 'weekly' | 'monthly';
 
 export interface UserProfile {
   uid: string;
@@ -274,6 +280,7 @@ export interface UserProfile {
   subscriptionExpiredAt?: string;
   subscriptionExpiresAt?: string;
   subscriptionStart?: string; // ISO date when paid tier began
+  billingCycle?: BillingCycle; // which cycle the current Pro sub was bought on
   // Provable, versioned Privacy Policy consent captured at signup (Data Protection Act 2019).
   consent?: { policyVersion: string; agreedAt: string };
 }

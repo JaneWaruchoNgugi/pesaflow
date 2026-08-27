@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
-import { Check, Repeat, ChevronUp, ChevronDown, X, BarChart3 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, Plus, Repeat, ChevronDown, BarChart3, Lock as LockIcon } from 'lucide-react';
 import type { Investment, InvestmentCategory, InvestmentStatus, InvestmentSummary } from '../types';
-import { INVESTMENT_META, RISK_COLORS, projectGrowth } from '../utils/investments';
+import { INVESTMENT_META, RISK_COLORS } from '../utils/investments';
+import { projectMMF } from '../utils/mmf';
 import { formatCurrency } from '../utils/expenses';
 import { IconSelect } from './ui/IconSelect';
+import { Modal } from './ui/Modal';
+
+// "5 yrs", "18 mo" — compact term for the list meta row.
+const termLabel = (months: number): string =>
+  months % 12 === 0 ? `${months / 12} yr${months / 12 === 1 ? '' : 's'}` : `${months} mo`;
+
+const STATUS_STYLES: Record<InvestmentStatus, { color: string; bg: string; label: string }> = {
+  active:    { color: 'var(--green)', bg: 'var(--green-dim)',  label: 'Active' },
+  matured:   { color: 'var(--gold)',  bg: 'var(--gold-dim)',   label: 'Matured' },
+  withdrawn: { color: 'var(--text-2)', bg: 'var(--bg-surface)', label: 'Withdrawn' },
+};
 
 // ─────────────────────────────────────────────────────────────
 // Summary bar
@@ -43,42 +55,80 @@ export const InvestmentSummaryBar: React.FC<SummaryProps> = ({ summary, monthlyI
 // ─────────────────────────────────────────────────────────────
 interface FormProps {
   onAdd: (inv: Omit<Investment, 'id'>) => void;
+  editing?: Investment | null;
+  onUpdate?: (id: string, inv: Omit<Investment, 'id'>) => void;
+  onCloseEdit?: () => void;
 }
 
-export const InvestmentForm: React.FC<FormProps> = ({ onAdd }) => {
+export const InvestmentForm: React.FC<FormProps> = ({ onAdd, editing, onUpdate, onCloseEdit }) => {
+  const [showForm,  setShowForm]  = useState(false);
   const [name,      setName]      = useState('');
   const [amount,    setAmount]    = useState('');
   const [category,  setCategory]  = useState<InvestmentCategory>('mmf');
   const [returnPct, setReturnPct] = useState(String(INVESTMENT_META['mmf'].avgReturn));
   const [notes,     setNotes]     = useState('');
   const [recurring, setRecurring] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [term,      setTerm]      = useState('');
+  const [termUnit,  setTermUnit]  = useState<'months' | 'years'>('years');
+  const [locked,    setLocked]    = useState(false);
+  const [saved,     setSaved]     = useState('');
 
   const handleCategoryChange = (cat: InvestmentCategory) => {
     setCategory(cat);
     setReturnPct(String(INVESTMENT_META[cat].avgReturn));
   };
 
+  const reset = () => {
+    setName(''); setAmount(''); setNotes(''); setRecurring(false); setTerm(''); setTermUnit('years'); setLocked(false); setSaved('');
+    setCategory('mmf'); setReturnPct(String(INVESTMENT_META['mmf'].avgReturn));
+  };
+
+  // When the parent asks to edit an investment, pre-fill the form.
+  useEffect(() => {
+    if (!editing) return;
+    setName(editing.name);
+    setAmount(String(editing.amount));
+    setCategory(editing.category);
+    setReturnPct(String(editing.expectedReturnPct));
+    setNotes(editing.notes ?? '');
+    setRecurring(editing.isRecurring);
+    setLocked(editing.locked ?? false);
+    setSaved(editing.savedAmount ? String(editing.savedAmount) : '');
+    if (editing.termMonths && editing.termMonths % 12 === 0) { setTerm(String(editing.termMonths / 12)); setTermUnit('years'); }
+    else if (editing.termMonths) { setTerm(String(editing.termMonths)); setTermUnit('months'); }
+    else { setTerm(''); setTermUnit('years'); }
+  }, [editing]);
+
+  const open = showForm || !!editing;
+  const close = () => { setShowForm(false); reset(); onCloseEdit?.(); };
+
   const handleSubmit = () => {
     const amt = parseFloat(amount.replace(/,/g, ''));
     const ret = parseFloat(returnPct) || 0;
     if (!name.trim() || isNaN(amt) || amt <= 0) return;
 
-    onAdd({
+    const t = parseFloat(term);
+    const termMonths = !isNaN(t) && t > 0 ? Math.round(termUnit === 'years' ? t * 12 : t) : undefined;
+    const savedNum = parseFloat(saved.replace(/,/g, ''));
+    const savedAmount = !isNaN(savedNum) && savedNum > 0 ? savedNum : undefined;
+
+    const data = {
       name: name.trim(),
       amount: amt,
       category,
       expectedReturnPct: ret,
       notes: notes.trim(),
-      date: new Date().toISOString().slice(0, 10),
-      status: 'active',
+      date: editing?.date ?? new Date().toISOString().slice(0, 10),
+      status: editing?.status ?? ('active' as const),
       isRecurring: recurring,
-    });
+      termMonths,
+      locked,
+      savedAmount,
+    };
 
-    setName(''); setAmount(''); setNotes(''); setRecurring(false);
-    setCategory('mmf'); setReturnPct(String(INVESTMENT_META['mmf'].avgReturn));
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 1800);
+    if (editing && onUpdate) onUpdate(editing.id, data);
+    else onAdd(data);
+    close();
   };
 
   const meta = INVESTMENT_META[category];
@@ -86,18 +136,18 @@ export const InvestmentForm: React.FC<FormProps> = ({ onAdd }) => {
   const CatIcon = meta.icon;
 
   return (
-    <div style={S.formCard}>
+    <>
+      <button style={S.trigger} onClick={() => setShowForm(true)}>
+        <Plus size={18} strokeWidth={2.6} /> Add Investment
+      </button>
+
+    <Modal open={open} onClose={close} title={editing ? 'Edit Investment' : 'Add Investment'}>
       <style>{`
         .inv-input:focus { border-color: var(--border-focus) !important; outline: none; }
         .inv-add-btn { transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
         .inv-add-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 28px var(--gold-glow) !important; }
         .inv-add-btn:active:not(:disabled) { transform: translateY(0); }
       `}</style>
-
-      <div style={S.formHeader}>
-        <span style={S.formTitle}>Log Investment</span>
-        {submitted && <span style={S.successTag}><Check size={12} strokeWidth={3} /> Investment logged!</span>}
-      </div>
 
       {/* Category description strip */}
       <div style={{ ...S.catStrip, borderColor: `${meta.color}30`, background: `${meta.color}08` }}>
@@ -139,6 +189,18 @@ export const InvestmentForm: React.FC<FormProps> = ({ onAdd }) => {
         </div>
 
         <div style={S.field}>
+          <label style={S.label}>Already saved (KSh) — optional</label>
+          <input
+            className="inv-input"
+            style={S.input}
+            type="number" min="0" inputMode="numeric"
+            placeholder="0"
+            value={saved}
+            onChange={(e) => setSaved(e.target.value)}
+          />
+        </div>
+
+        <div style={S.field}>
           <label style={S.label}>Category</label>
           <IconSelect
             value={category}
@@ -159,6 +221,26 @@ export const InvestmentForm: React.FC<FormProps> = ({ onAdd }) => {
             onChange={(e) => setReturnPct(e.target.value)}
           />
         </div>
+
+        <div style={S.field}>
+          <label style={S.label}>How long? (optional)</label>
+          <input
+            className="inv-input"
+            style={S.input}
+            type="number" min="0" inputMode="numeric"
+            placeholder="e.g. 5"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+          />
+        </div>
+
+        <div style={S.field}>
+          <label style={S.label}>Period</label>
+          <select className="inv-input" style={S.input} value={termUnit} onChange={(e) => setTermUnit(e.target.value as 'months' | 'years')}>
+            <option value="years">Years</option>
+            <option value="months">Months</option>
+          </select>
+        </div>
       </div>
 
       {/* Notes row */}
@@ -173,7 +255,7 @@ export const InvestmentForm: React.FC<FormProps> = ({ onAdd }) => {
         />
       </div>
 
-      <div className="form-bottom">
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 12, marginTop: 16 }}>
         <label style={S.checkLabel}>
           <input
             type="checkbox"
@@ -183,16 +265,26 @@ export const InvestmentForm: React.FC<FormProps> = ({ onAdd }) => {
           />
           <span>Monthly recurring contribution</span>
         </label>
+        <label style={S.checkLabel}>
+          <input
+            type="checkbox"
+            checked={locked}
+            onChange={(e) => setLocked(e.target.checked)}
+            style={{ accentColor: 'var(--gold)' }}
+          />
+          <span>Funds are locked until maturity</span>
+        </label>
         <button
           className="inv-add-btn"
-          style={{ ...S.addBtn, opacity: !name.trim() || !amount ? 0.5 : 1 }}
+          style={{ ...S.addBtn, width: '100%', justifyContent: 'center', display: 'inline-flex', alignItems: 'center', gap: 7, opacity: !name.trim() || !amount ? 0.5 : 1 }}
           onClick={handleSubmit}
           disabled={!name.trim() || !amount}
         >
-          + Log Investment
+          <Check size={15} strokeWidth={2.6} /> {editing ? 'Update Investment' : 'Save Investment'}
         </button>
       </div>
-    </div>
+    </Modal>
+    </>
   );
 };
 
@@ -203,12 +295,13 @@ interface ListProps {
   investments: Investment[];
   onRemove: (id: string) => void;
   onUpdateStatus: (id: string, status: InvestmentStatus) => void;
+  onEdit: (inv: Investment) => void;
   currency: string;
 }
 
-export const InvestmentList: React.FC<ListProps> = ({ investments, onRemove, onUpdateStatus, currency }) => {
+export const InvestmentList: React.FC<ListProps> = ({ investments, onRemove, onUpdateStatus, onEdit, currency }) => {
   const [filter, setFilter] = useState<'all' | InvestmentCategory | 'recurring'>('all');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailInv, setDetailInv] = useState<Investment | null>(null);
 
   const sorted = [...investments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -221,11 +314,6 @@ export const InvestmentList: React.FC<ListProps> = ({ investments, onRemove, onU
   // Categories present in current list
   const presentCategories = [...new Set(sorted.map((i) => i.category))];
 
-  const STATUS_STYLES: Record<InvestmentStatus, { color: string; bg: string; label: string }> = {
-    active:    { color: 'var(--green)', bg: 'var(--green-dim)',  label: 'Active' },
-    matured:   { color: 'var(--gold)', bg: 'var(--gold-dim)', label: 'Matured' },
-    withdrawn: { color: 'var(--text-2)', bg: 'var(--bg-surface)',  label: 'Withdrawn' },
-  };
 
   return (
     <div style={S.listCard}>
@@ -279,108 +367,141 @@ export const InvestmentList: React.FC<ListProps> = ({ investments, onRemove, onU
             const meta  = INVESTMENT_META[inv.category];
             const Icon  = meta.icon;
             const ss    = STATUS_STYLES[inv.status];
-            const risk  = RISK_COLORS[meta.riskLevel];
-            const expanded = expandedId === inv.id;
-            const proj1yr  = projectGrowth(inv.amount, inv.expectedReturnPct, 1) - inv.amount;
-            const proj5yr  = projectGrowth(inv.amount, inv.expectedReturnPct, 5) - inv.amount;
+            const nowVal = (inv.savedAmount ?? 0) > 0 ? inv.savedAmount! : inv.amount;
 
             return (
-              <div key={inv.id}>
-                <div
-                  className="inv-row"
-                  style={{ ...S.invRow, background: expanded ? 'var(--bg-surface)' : 'transparent' }}
-                >
-                  {/* Icon */}
-                  <div style={{ ...S.invIcon, background: `${meta.color}15`, border: `1px solid ${meta.color}25` }}>
-                    <Icon size={20} strokeWidth={2} style={{ color: meta.color }} />
-                  </div>
-
-                  {/* Info */}
-                  <div style={S.invInfo}>
-                    <div style={S.invName}>{inv.name}</div>
-                    <div style={S.invMeta}>
-                      <span style={{ color: meta.color }}>{meta.label}</span>
-                      <span style={S.dot}>·</span>
-                      <span>{inv.date}</span>
-                      <span style={S.dot}>·</span>
-                      <span style={{ color: risk.text }}>{meta.riskLevel} risk</span>
-                      {inv.isRecurring && (
-                        <><span style={S.dot}>·</span><span style={{ color: 'var(--blue)', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Repeat size={11} strokeWidth={2.4} /> Monthly</span></>
-                      )}
-                      {inv.notes && (
-                        <><span style={S.dot}>·</span><span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>{inv.notes}</span></>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right side */}
-                  <div style={S.invRight}>
-                    <div style={S.invAmount}>{formatCurrency(inv.amount, currency)}</div>
-                    <div style={S.invReturn}>{inv.expectedReturnPct}% / yr</div>
-                  </div>
-
-                  {/* Status badge */}
-                  <select
-                    className="status-select"
-                    style={{ ...S.statusSelect, color: ss.color, background: ss.bg, borderColor: `${ss.color}25` }}
-                    value={inv.status}
-                    onChange={(e) => onUpdateStatus(inv.id, e.target.value as InvestmentStatus)}
-                  >
-                    <option value="active">Active</option>
-                    <option value="matured">Matured</option>
-                    <option value="withdrawn">Withdrawn</option>
-                  </select>
-
-                  {/* Expand toggle */}
-                  <button
-                    style={S.expandBtn}
-                    onClick={() => setExpandedId(expanded ? null : inv.id)}
-                    title="View projections"
-                  >
-                    {expanded ? <ChevronUp size={14} strokeWidth={2.4} /> : <ChevronDown size={14} strokeWidth={2.4} />}
-                  </button>
-
-                  {/* Remove */}
-                  <button
-                    className="inv-remove"
-                    style={S.removeBtn}
-                    onClick={() => onRemove(inv.id)}
-                    aria-label="Remove"
-                  ><X size={14} strokeWidth={2.4} /></button>
+              <button key={inv.id} className="inv-row" style={S.invRowBtn} onClick={() => setDetailInv(inv)}>
+                <div style={{ ...S.invIcon, background: `${meta.color}15`, border: `1px solid ${meta.color}25` }}>
+                  <Icon size={20} strokeWidth={2} style={{ color: meta.color }} />
                 </div>
 
-                {/* Expanded projection row */}
-                {expanded && (
-                  <div style={S.projRow}>
-                    <div style={S.projTitle}>Growth Projection at {inv.expectedReturnPct}% annual return</div>
-                    <div style={S.projGrid}>
-                      {[
-                        { label: 'Principal',   val: inv.amount,                                          color: 'var(--text-2)' },
-                        { label: '+ 1 Year',    val: projectGrowth(inv.amount, inv.expectedReturnPct, 1), color: 'var(--blue)' },
-                        { label: '+ 3 Years',   val: projectGrowth(inv.amount, inv.expectedReturnPct, 3), color: '#A78BFA' },
-                        { label: '+ 5 Years',   val: projectGrowth(inv.amount, inv.expectedReturnPct, 5), color: 'var(--green)' },
-                        { label: '+ 10 Years',  val: projectGrowth(inv.amount, inv.expectedReturnPct, 10), color: 'var(--gold)' },
-                      ].map((p) => (
-                        <div key={p.label} style={S.projStat}>
-                          <div style={S.projStatLabel}>{p.label}</div>
-                          <div style={{ ...S.projStatVal, color: p.color }}>{formatCurrency(Math.round(p.val), 'KES')}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={S.projGainRow}>
-                      <span style={S.projGainLabel}>Gain in 1 yr:</span>
-                      <span style={{ color: 'var(--blue)' }}>{formatCurrency(Math.round(proj1yr), 'KES')}</span>
-                      <span style={S.projGainLabel}>Gain in 5 yrs:</span>
-                      <span style={{ color: 'var(--green)' }}>{formatCurrency(Math.round(proj5yr), 'KES')}</span>
-                    </div>
+                <div style={S.invInfo}>
+                  <div style={S.invName}>{inv.name}</div>
+                  <div style={S.invMeta}>
+                    <span style={{ color: meta.color }}>{meta.label}</span>
+                    {inv.locked ? (
+                      <><span style={S.dot}>·</span><span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--amber)' }}><LockIcon size={11} strokeWidth={2.4} /> Locked</span></>
+                    ) : null}
+                    {inv.isRecurring && (
+                      <><span style={S.dot}>·</span><span style={{ color: 'var(--blue)' }}>{formatCurrency(inv.amount, currency)}/mo</span></>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+
+                <div style={S.invRight}>
+                  <div style={S.invAmount}>{formatCurrency(nowVal, currency)}</div>
+                  <div style={S.invReturn}>{inv.expectedReturnPct}% / yr</div>
+                </div>
+
+                <span style={{ ...S.statusChip, color: ss.color, background: ss.bg, border: `1px solid ${ss.color}25` }}>{ss.label}</span>
+                <ChevronDown size={16} strokeWidth={2.4} style={{ color: 'var(--text-3)', transform: 'rotate(-90deg)', flexShrink: 0 }} />
+              </button>
             );
           })}
         </div>
       )}
+
+      {detailInv && (
+        <InvestmentDetailModal
+          inv={detailInv}
+          currency={currency}
+          onClose={() => setDetailInv(null)}
+          onEdit={(i) => { setDetailInv(null); onEdit(i); }}
+          onRemove={(id) => { setDetailInv(null); onRemove(id); }}
+          onUpdateStatus={onUpdateStatus}
+        />
+      )}
     </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// Investment detail popup — full info, projection and actions
+// ─────────────────────────────────────────────────────────────
+const InvestmentDetailModal: React.FC<{
+  inv: Investment; currency: string; onClose: () => void;
+  onEdit: (inv: Investment) => void; onRemove: (id: string) => void;
+  onUpdateStatus: (id: string, status: InvestmentStatus) => void;
+}> = ({ inv, currency, onClose, onEdit, onRemove, onUpdateStatus }) => {
+  const meta = INVESTMENT_META[inv.category];
+  const risk = RISK_COLORS[meta.riskLevel];
+  const ss = STATUS_STYLES[inv.status];
+  const Icon = meta.icon;
+
+  const nowVal     = (inv.savedAmount ?? 0) > 0 ? inv.savedAmount! : inv.amount;
+  const initialBal = (inv.savedAmount ?? 0) > 0 ? inv.savedAmount! : (inv.isRecurring ? 0 : inv.amount);
+  const monthlyTop = inv.isRecurring ? inv.amount : 0;
+  const projFor    = (yrs: number) => projectMMF(initialBal, monthlyTop, inv.expectedReturnPct, 'monthly', yrs).futureValue;
+
+  const facts: [string, React.ReactNode][] = [
+    ['Category', meta.label],
+    ['Current value', formatCurrency(nowVal, currency)],
+    ['Expected return', `${inv.expectedReturnPct}% / yr`],
+    ['Risk', <span style={{ color: risk.text }}>{meta.riskLevel}</span>],
+    ...(monthlyTop > 0 ? [['Contribution', `${formatCurrency(monthlyTop, currency)} / month`]] as [string, React.ReactNode][] : []),
+    ...(inv.termMonths ? [['Term', termLabel(inv.termMonths)]] as [string, React.ReactNode][] : []),
+    ['Locked', inv.locked ? 'Yes — until maturity' : 'No — flexible'],
+    ['Added', inv.date],
+    ...(inv.notes ? [['Notes', inv.notes]] as [string, React.ReactNode][] : []),
+  ];
+
+  return (
+    <Modal open onClose={onClose} title={inv.name}>
+      <div style={S.detailHead}>
+        <div style={{ ...S.invIcon, background: `${meta.color}15`, border: `1px solid ${meta.color}25` }}>
+          <Icon size={22} strokeWidth={2} style={{ color: meta.color }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 24, fontWeight: 700, color: meta.color }}>{formatCurrency(nowVal, currency)}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)' }}>current value · {inv.expectedReturnPct}% / yr</div>
+        </div>
+        <select
+          className="status-select"
+          style={{ ...S.statusSelect, color: ss.color, background: ss.bg, borderColor: `${ss.color}25` }}
+          value={inv.status}
+          onChange={(e) => onUpdateStatus(inv.id, e.target.value as InvestmentStatus)}
+        >
+          <option value="active">Active</option>
+          <option value="matured">Matured</option>
+          <option value="withdrawn">Withdrawn</option>
+        </select>
+      </div>
+
+      <div style={S.factGrid}>
+        {facts.map(([k, v]) => (
+          <div key={k} style={S.factRow}>
+            <span style={S.factKey}>{k}</span>
+            <span style={S.factVal}>{v}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ ...S.projRow, marginTop: 4 }}>
+        <div style={S.projTitle}>
+          Growth projection at {inv.expectedReturnPct}% annual return
+          {monthlyTop > 0 && <> · incl. {formatCurrency(monthlyTop, currency)}/mo</>}
+        </div>
+        <div style={S.projGrid}>
+          {[
+            { label: 'Now',        val: nowVal,      color: 'var(--text-2)' },
+            { label: '+ 1 Year',   val: projFor(1),  color: 'var(--blue)' },
+            { label: '+ 3 Years',  val: projFor(3),  color: '#A78BFA' },
+            { label: '+ 5 Years',  val: projFor(5),  color: 'var(--green)' },
+            { label: '+ 10 Years', val: projFor(10), color: 'var(--gold)' },
+          ].map((p) => (
+            <div key={p.label} style={S.projStat}>
+              <div style={S.projStatLabel}>{p.label}</div>
+              <div style={{ ...S.projStatVal, color: p.color }}>{formatCurrency(Math.round(p.val), 'KES')}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+        <button style={S.detailEditBtn} onClick={() => onEdit(inv)}>Edit investment</button>
+        <button style={S.detailRemoveBtn} onClick={() => onRemove(inv.id)}>Remove</button>
+      </div>
+    </Modal>
   );
 };
 
@@ -499,6 +620,7 @@ const S: Record<string, React.CSSProperties> = {
   select:     { background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', color: 'var(--text-1)', fontSize: 14, fontFamily: 'Karla, sans-serif', width: '100%' },
   checkLabel: { display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', fontSize: 14, cursor: 'pointer' },
   addBtn:     { padding: '11px 26px', background: 'linear-gradient(135deg, var(--green), #2BBA76)', color: '#0A1628', borderRadius: 9, fontWeight: 700, fontSize: 14, fontFamily: 'Karla, sans-serif', boxShadow: '0 4px 20px var(--green-dim)', cursor: 'pointer', border: 'none' },
+  trigger:    { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 12px var(--gold-glow)', alignSelf: 'flex-start' },
 
   // list
   listCard:   { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 22px', marginTop: 16 },
@@ -513,6 +635,15 @@ const S: Record<string, React.CSSProperties> = {
   emptyText:  { fontSize: 14, color: 'var(--text-3)', lineHeight: 1.5 },
   list:       { display: 'flex', flexDirection: 'column' as const, gap: 0 },
   invRow:     { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 10px', borderRadius: 10, borderBottom: '1px solid var(--border)' },
+  invRowBtn:  { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 10px', borderRadius: 10, borderBottom: '1px solid var(--border)', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer' },
+  statusChip: { fontSize: 10.5, fontWeight: 700, padding: '3px 9px', borderRadius: 20, letterSpacing: '0.04em', flexShrink: 0, whiteSpace: 'nowrap' },
+  detailHead: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 },
+  factGrid:   { display: 'grid', gridTemplateColumns: '1fr', gap: 0, marginBottom: 16 },
+  factRow:    { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--border)', fontSize: 13.5 },
+  factKey:    { color: 'var(--text-3)', flexShrink: 0 },
+  factVal:    { color: 'var(--text-1)', fontWeight: 600, textAlign: 'right' as const, textTransform: 'capitalize' as const },
+  detailEditBtn:   { flex: 1, padding: '11px 16px', background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
+  detailRemoveBtn: { padding: '11px 18px', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid var(--red-b)', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
   invIcon:    { width: 42, height: 42, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 },
   invInfo:    { flex: 1, minWidth: 0 },
   invName:    { fontSize: 14, color: 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },

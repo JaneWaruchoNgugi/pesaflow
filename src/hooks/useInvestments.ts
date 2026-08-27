@@ -43,8 +43,12 @@ export const useInvestments = () => {
     persist(investments.map((i) => (i.id === id ? { ...i, status } : i)));
   }, [investments]);
 
+  const updateInvestment = useCallback((id: string, data: Omit<Investment, 'id'>) => {
+    persist(investments.map((i) => (i.id === id ? { ...data, id } : i)));
+  }, [investments]);
+
   const monthlyInvestments = useMemo(() => filterInvestmentsByMonth(investments, selectedMonth), [investments, selectedMonth]);
   const summary = useMemo(() => calculateInvestmentSummary(investments, selectedMonth), [investments, selectedMonth]);
 
-  return { investments, monthlyInvestments, selectedMonth, setSelectedMonth, summary, addInvestment, removeInvestment, updateStatus };
+  return { investments, monthlyInvestments, selectedMonth, setSelectedMonth, summary, addInvestment, removeInvestment, updateStatus, updateInvestment };
 };

@@ -32,7 +32,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children }) 
 
   return createPortal(
     <div style={S.overlay} onClick={onClose}>
-      <div style={S.card} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="fw-modal" style={S.card} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <div style={S.header}>
           <div style={S.title}>{title}</div>
           <button style={S.close} onClick={onClose} aria-label="Close"><X size={18} strokeWidth={2.4} /></button>

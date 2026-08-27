@@ -11,9 +11,9 @@ interface ProfilePageProps {
 }
 
 const TIER_COLOR: Record<SubscriptionTier, string> = {
-  free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA',
+  free: '#9BAAC4', silver: '#C0C0C0', gold: '#C9A84C', platinum: '#A78BFA', pro: '#D97706',
 };
-const TIER_PRICE: Record<SubscriptionTier, number> = { free: 0, silver: 299, gold: 599, platinum: 999 };
+const TIER_PRICE: Record<SubscriptionTier, number> = { free: 0, silver: 299, gold: 599, platinum: 999, pro: 299 };
 
 const renewalDate = (profile: UserProfile): string | null => {
   const start = profile.subscriptionStart ?? profile.createdAt;

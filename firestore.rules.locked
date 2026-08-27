@@ -1,0 +1,96 @@
+rules_version = '2';
+// ─────────────────────────────────────────────────────────────────────────────
+// TIGHTENED RULES — deploy this LAST, only after ALL of the following are done:
+//   1. Enable Firebase Authentication (Console → Build → Authentication → Get started).
+//   2. Grant the functions runtime service account the "Service Account Token
+//      Creator" role (so createCustomToken works) — see notes handed to you.
+//   3. Deploy the auth functions (authWithPin, adminSignIn) — done.
+//   4. Deploy the updated CLIENT (which signs in with custom tokens) to your site.
+//   5. Verify: signup, login, data loads, and admin login all work on the live site.
+// THEN:  cp firestore.rules.locked firestore.rules && firebase deploy --only firestore:rules
+// Rollback: keep the old open firestore.rules; redeploy it to instantly revert.
+// ─────────────────────────────────────────────────────────────────────────────
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+
+    // A user can only touch their own document tree; admins can touch anyone's.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      match /{document=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Admin accounts — only admins (Cloud Functions use the Admin SDK, which bypasses rules).
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Payments — written only by Cloud Functions; a signed-in user can read (status polling).
+    match /payments/{paymentId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Support workflow — admin-managed.
+    match /supportCases/{caseId} {
+      allow read, write: if isAdmin();
+    }
+
+    // User ↔ support chat threads — signed-in users participate; admins moderate.
+    match /supportThreads/{threadId} {
+      allow read, write: if signedIn();
+      match /messages/{messageId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    // Chat reliability logs — clients append, only admins read/manage.
+    match /chatErrors/{errorId} {
+      allow create: if signedIn();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Audit trail — admin-readable, written only by Cloud Functions.
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // App configuration — anyone signed in can read, only admins write.
+    match /appConfig/{configId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Newsletter subscribers — public may subscribe; list is not client-readable.
+    match /subscribers/{subId} {
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.size() < 200;
+      allow read, update, delete: if false;
+    }
+
+    // Newsletter send records — Cloud Functions only.
+    match /newsletters/{id} {
+      allow read, write: if false;
+    }
+
+    // Blog: articles — public read ONLY when published; admins (CMS) read everything
+    // incl. drafts/scheduled. Writes admin-only.
+    // Public list/query reads must filter to status=='published' to satisfy this rule.
+    match /articles/{slug} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Blog: categories — public read; admin write.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

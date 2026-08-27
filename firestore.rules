@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User data — each signed-in user may only access their own tree; admins (users
+    // whose token carries the `admin` claim minted by adminSignIn) may access any.
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                         && (request.auth.uid == userId || request.auth.token.admin == true);
+
+      // Financial subcollections (expenses, investments, goals, bills, networth, chat)
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth != null
+                           && (request.auth.uid == userId || request.auth.token.admin == true);
+      }
+
+      // Named data docs (profile, habits, emergencyFund)
+      match /data/{docId} {
+        allow read, write: if request.auth != null
+                           && (request.auth.uid == userId || request.auth.token.admin == true);
+      }
+    }
+
+    // Admin accounts — client-managed because this app does not use Firebase Auth
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    // Payments — reads allowed for status polling, writes only via Cloud Functions
+    match /payments/{paymentId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Admin support workflow data
+    match /supportCases/{caseId} {
+      allow read, write: if true;
+    }
+
+    // User-to-support chat threads
+    match /supportThreads/{threadId} {
+      allow read, write: if true;
+      match /messages/{messageId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Chat reliability logs
+    match /chatErrors/{errorId} {
+      allow read, write: if true;
+    }
+
+    // Admin audit trail
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Business-level app configuration
+    match /appConfig/{configId} {
+      allow read, write: if true;
+    }
+
+    // Newsletter subscribers — anyone can subscribe (create their own email doc),
+    // but the list is NOT publicly readable. Admin/Cloud Functions read it to send updates.
+    match /subscribers/{subId} {
+      allow create: if request.resource.data.email is string
+                    && request.resource.data.email.size() < 200;
+      allow read, update, delete: if false; // Admin SDK / admin only
+    }
+
+    // Blog: articles — public read ONLY when published; admins (CMS) read everything
+    // incl. drafts/scheduled. Writes are admin-only.
+    // Public list/query reads must filter to status=='published' to satisfy this rule.
+    match /articles/{slug} {
+      allow read: if resource.data.status == 'published'
+                  || (request.auth != null && request.auth.token.admin == true);
+      allow create, delete: if request.auth != null && request.auth.token.admin == true;
+      // Admins edit freely. Additionally, anyone may bump the public view counter —
+      // but ONLY counts.views, and ONLY by +1 (nothing else about the doc can change).
+      allow update: if (request.auth != null && request.auth.token.admin == true)
+                    || (
+                      resource.data.status == 'published'
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['counts'])
+                      && request.resource.data.counts.diff(resource.data.counts).affectedKeys().hasOnly(['views'])
+                      && request.resource.data.counts.views == resource.data.counts.views + 1
+                    );
+
+      // Blog comments & replies — public read; any signed-in user may post as themselves.
+      // The ONLY allowed update is toggling your own uid in likedBy (comment likes);
+      // text/author are immutable. Authors (or admins) may delete.
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null
+                      && request.resource.data.authorUid == request.auth.uid
+                      && request.resource.data.authorName is string
+                      && request.resource.data.authorName.size() <= 120
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 2000
+                      && (request.resource.data.parentId == null || request.resource.data.parentId is string)
+                      && request.resource.data.likedBy is list
+                      && request.resource.data.likedBy.size() == 0;
+        // Like/unlike: only the likedBy field may change, and only by adding/removing
+        // the caller's own uid.
+        allow update: if request.auth != null
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])
+                      && request.resource.data.likedBy is list
+                      && request.resource.data.likedBy.toSet()
+                           .difference(resource.data.get('likedBy', []).toSet()).hasOnly([request.auth.uid])
+                      && resource.data.get('likedBy', []).toSet()
+                           .difference(request.resource.data.likedBy.toSet()).hasOnly([request.auth.uid]);
+        allow delete: if request.auth != null
+                      && (resource.data.authorUid == request.auth.uid
+                          || request.auth.token.admin == true);
+      }
+
+      // Blog article likes — one doc per user (doc id == uid). Public read for counts;
+      // each user may write/delete only their OWN like doc (idempotent — the doc just
+      // holds a timestamp, so re-liking overwrites harmlessly instead of erroring).
+      match /likes/{uid} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Blog: categories — public read; admin write.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

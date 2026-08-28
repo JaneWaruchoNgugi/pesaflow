@@ -28,12 +28,7 @@ interface AIChatProps {
 
 const QUICK_PROMPTS = [
   'How healthy is my spending this month?',
-  'Where can I cut costs to save more?',
   'Am I on track with my goals?',
-  'Analyse my net worth',
-  'How fast can I build my emergency fund?',
-  'Which bills should I pay first?',
-  'Should I invest or clear debt first?',
   'Give me a monthly savings plan',
 ];
 

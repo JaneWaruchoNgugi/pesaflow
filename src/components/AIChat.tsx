@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wallet, BarChart3, TrendingUp, Scale, Siren, AlertTriangle, Send, MoreHorizontal } from 'lucide-react';
+import { Wallet, BarChart3, TrendingUp, Scale, AlertTriangle, Send, MoreHorizontal } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
 import { addDoc, collection, query, orderBy, limit, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db, functions } from '../lib/firebase';
@@ -23,14 +23,7 @@ interface AIChatProps {
   habits?: Habit[];
   efCurrent?: number;
   efTarget?: number;
-  onNavigateToAlerts?: () => void;
 }
-
-const QUICK_PROMPTS = [
-  'How healthy is my spending this month?',
-  'Am I on track with my goals?',
-  'Give me a monthly savings plan',
-];
 
 type CallableFn = (data: {
   userId: string;
@@ -63,7 +56,6 @@ export const AIChat: React.FC<AIChatProps> = ({
   habits = [],
   efCurrent = 0,
   efTarget = 0,
-  onNavigateToAlerts,
 }) => {
   const welcomeMsg: ChatMessage = {
     id: 'welcome',
@@ -209,12 +201,6 @@ Claude is unavailable right now, so I used the built-in PesaFlow advisor instead
           <span style={S.badge}><TrendingUp size={12} strokeWidth={2.2} /> {formatCurrency(investmentSummary.totalInvested, profile.currency)} invested</span>
           <span style={S.badge}><Scale size={12} strokeWidth={2.2} /> {formatCurrency(netWorthSummary.netWorth, profile.currency)} NW</span>
         </div>
-        {onNavigateToAlerts && (
-          <button onClick={onNavigateToAlerts}
-            style={{ padding: '7px 14px', background: 'var(--red-dim)', border: '1px solid var(--red-b)', borderRadius: 8, color: 'var(--red)', fontSize: 12, fontFamily: 'Karla, sans-serif', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <Siren size={14} strokeWidth={2.4} /> SOS
-          </button>
-        )}
       </div>
 
       {/* Messages */}
@@ -251,18 +237,6 @@ Claude is unavailable right now, so I used the built-in PesaFlow advisor instead
         {error && <div style={S.errorMsg}><AlertTriangle size={14} strokeWidth={2.2} /> {error}</div>}
         <div ref={bottomRef} />
       </div>
-
-      {/* Quick prompts — show when only welcome message is present */}
-      {messages.length <= 1 && historyLoaded && (
-        <div style={S.quickPromptsWrap}>
-          <div style={S.quickLabel}>Quick questions</div>
-          <div style={S.quickPrompts}>
-            {QUICK_PROMPTS.map((p) => (
-              <button key={p} className="fw-quick-btn" style={S.quickBtn} onClick={() => sendMessage(p)}>{p}</button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Input */}
       <div style={S.inputArea}>
@@ -320,10 +294,6 @@ const S: Record<string, React.CSSProperties> = {
   typingDots: { display: 'flex', gap: 5, padding: '3px 0', alignItems: 'center' },
   dot: { ...DOT_BASE },
   errorMsg: { fontSize: 13, color: 'var(--red)', background: 'var(--red-dim)', border: '1px solid var(--red-b)', padding: '9px 13px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 },
-  quickPromptsWrap: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '13px 16px' },
-  quickLabel: { fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 9 },
-  quickPrompts: { display: 'flex', flexWrap: 'wrap', gap: 7 },
-  quickBtn: { padding: '6px 13px', background: 'var(--gold-dim)', border: '1px solid var(--border-acc)', borderRadius: 20, color: 'var(--gold)', fontSize: 12, fontFamily: 'Karla, sans-serif', cursor: 'pointer' },
   inputArea: { display: 'flex', gap: 10, alignItems: 'flex-end' },
   textarea: { flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border-acc)', borderRadius: 11, padding: '12px 15px', color: 'var(--text-1)', fontSize: 16, fontFamily: 'Karla, sans-serif', resize: 'none', lineHeight: 1.5, minHeight: 48 },
   sendBtn: { width: 48, height: 48, borderRadius: 11, background: 'linear-gradient(135deg, var(--gold), var(--gold-l))', color: '#0A1628', fontSize: 21, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: 'none', cursor: 'pointer', transition: '0.15s' },

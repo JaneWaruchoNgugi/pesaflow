@@ -511,7 +511,6 @@ const MainApp: React.FC = () => {
               habits={habits.habits}
               efCurrent={emergencyFund.data.currentAmount}
               efTarget={emergencyFund.targetAmount}
-              onNavigateToAlerts={() => setActiveView('alerts')}
             />
           )}
 

@@ -562,7 +562,7 @@ const MainApp: React.FC = () => {
         </div>
       </main>
 
-      {auth.profile && <SupportChatWidget profile={auth.profile} />}
+      {auth.profile && activeView !== 'chat' && <SupportChatWidget profile={auth.profile} />}
 
       <footer className="app-footer">
         <span>PesaFlow © {new Date().getFullYear()}</span>

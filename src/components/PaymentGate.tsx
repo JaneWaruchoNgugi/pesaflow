@@ -33,7 +33,7 @@ const TIER_META: Record<SubscriptionTier, { name: string; color: string; icon: L
   silver:   { name: 'Silver',   color: '#C0C0C0', icon: Gem, features: ['Bills & recurring payments', 'Savings goals', 'Emergency fund', 'Net Worth'] },
   gold:     { name: 'Gold',     color: '#C9A84C', icon: Crown, features: ['Everything in Silver', 'Investments', 'Insights', 'AI Chat', 'Alerts & SOS', 'Priority support', 'CSV exports'] },
   platinum: { name: 'Platinum', color: '#A78BFA', icon: Sparkles, features: ['Legacy Platinum access', 'Everything in Gold', 'Priority support'] },
-  pro:      { name: 'Pro',      color: '#D97706', icon: Crown, features: ['AI Chat advisor', 'Insights & analytics', 'Investment tracker', 'Alerts & SOS', 'CSV exports', 'Unlimited goals & bills'] },
+  pro:      { name: 'Pro',      color: '#D97706', icon: Crown, features: ['AI financial advisor (chat)', 'Personalised money coaching', 'Instant answers from your data'] },
 };
 
 const currentTierPrice = (tier: SubscriptionTier): number => {

@@ -36,7 +36,7 @@ import { AlertsPanel }      from './components/AlertsPanel';
 import { Loans }            from './components/Loans';
 import { LandingPage }      from './components/LandingPage';
 import { PLAN_LOCKED_VIEWS } from './lib/planAccess';
-import { PRO_PRICES, isPro, isTestProEmail, FREE_GOAL_LIMIT } from './lib/pricing';
+import { PRO_PRICES, isPro, isTestProEmail } from './lib/pricing';
 import { PaymentGate }      from './components/PaymentGate';
 import { UpgradePage }      from './components/UpgradePage';
 import { ProfilePage }      from './components/ProfilePage';
@@ -237,8 +237,8 @@ const MainApp: React.FC = () => {
   // Test accounts (see pricing.ts) always resolve to Pro, regardless of their stored tier.
   const userTier: SubscriptionTier = isTestProEmail(auth.profile?.email) ? 'pro' : (auth.profile?.tier ?? 'free');
   const pro = isPro(userTier);
-  // Free users who tap a Pro-only action (CSV export) are sent to the upgrade page.
-  const gatedExport = (fn: () => void) => () => { if (pro) fn(); else setActiveView('upgrade'); };
+  // CSV exports are free — pass through directly.
+  const gatedExport = (fn: () => void) => fn;
   const subscriptionNotice = (() => {
     const profile = auth.profile;
     if (!profile) return null;
@@ -423,7 +423,7 @@ const MainApp: React.FC = () => {
                 onUpdateSaved={goals.updateSaved}
                 onUpdate={goals.updateGoal}
                 currency={profile.currency}
-                maxGoals={pro ? undefined : FREE_GOAL_LIMIT}
+                maxGoals={undefined}
                 onUpgrade={() => setActiveView('upgrade')}
               />
             </div>

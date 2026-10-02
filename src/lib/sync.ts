@@ -1,7 +1,12 @@
 import { doc, setDoc, deleteDoc, writeBatch, collection, getDocs, getDoc } from 'firebase/firestore';
-import { db, ensureAuthReady } from './firebase';
+import { db, auth, ensureAuthReady } from './firebase';
 
+// auth.currentUser is reliable here because every exported function awaits
+// ensureAuthReady() before calling this. localStorage is a fallback for the
+// rare edge case where auth state changes between ensureAuthReady resolving
+// and this call (e.g. very rapid logout).
 const getUid = (): string | null => {
+  if (auth.currentUser?.uid) return auth.currentUser.uid;
   try {
     const p = JSON.parse(localStorage.getItem('finwise_auth_profile') || 'null');
     return p?.uid || null;

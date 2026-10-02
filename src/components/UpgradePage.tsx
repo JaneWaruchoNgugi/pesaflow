@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
-import { BarChart3, Bell, Bot, Check, Crown, Download, Sparkles, Target, TrendingUp } from 'lucide-react';
+import { Bot, Check, Crown, MessageSquare, Sparkles } from 'lucide-react';
 import type { BillingCycle, SubscriptionTier } from '../types';
 import { PRO_PRICES, CYCLE_DAYS, cyclePerDay, isPro } from '../lib/pricing';
 
 const CORE_FREE = [
   'Expense tracking & categorisation',
   'Bills & recurring payments',
-  'Savings goals (up to 3)',
-  'Emergency fund basics',
+  'Unlimited savings goals',
+  'Emergency fund tracker',
   'Net Worth calculator',
-  'Dashboard, Advisor & the Learning Hub',
+  'Investment portfolio tracker',
+  'Spending insights & analytics',
+  'Alerts & SOS system',
+  'CSV data exports',
+  'Dashboard, Advisor & Learning Hub',
 ];
 
 const PRO_FEATURES: { icon: React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>; label: string }[] = [
-  { icon: Bot, label: 'AI financial advisor (chat)' },
-  { icon: BarChart3, label: 'Spending insights & analytics' },
-  { icon: TrendingUp, label: 'Investment portfolio tracker' },
-  { icon: Bell, label: 'Alerts & SOS system' },
-  { icon: Download, label: 'CSV data exports' },
-  { icon: Target, label: 'Unlimited goals & bills' },
+  { icon: Bot, label: 'AI financial advisor — ask anything about your money' },
+  { icon: MessageSquare, label: 'Personalised chat: budgeting, investing, saving tips' },
+  { icon: Sparkles, label: 'Instant answers powered by your real financial data' },
 ];
 
 const GOLD = '#D97706';
@@ -44,10 +45,10 @@ export const UpgradePage: React.FC<UpgradePageProps> = ({ currentTier, onSelectP
 
       <section style={S.hero}>
         <div style={S.badge}><Crown size={13} /> PesaFlow Pro</div>
-        <h1 style={S.title}>Unlock the smart money tools</h1>
+        <h1 style={S.title}>Unlock your AI money coach</h1>
         <p style={S.sub}>
-          Core tracking stays free forever. <strong style={{ color: 'var(--text-1)' }}>Pro</strong> adds AI coaching,
-          insights, investment tracking, alerts, exports and unlimited goals — pay daily, weekly or monthly.
+          Every tracking tool is free forever. <strong style={{ color: 'var(--text-1)' }}>Pro</strong> adds the
+          AI Chat advisor — personalised, instant financial guidance powered by your real data.
         </p>
       </section>
 

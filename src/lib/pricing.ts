@@ -28,9 +28,6 @@ export const cyclePerDay = (cycle: BillingCycle): number => PRO_PRICES[cycle] / 
 // grandfathered into full access so nobody loses features in the switch to Pro.
 export const isPro = (tier: SubscriptionTier | undefined): boolean => !!tier && tier !== 'free';
 
-// Free-tier caps — Pro removes them. Kept modest so the free app is still useful.
-export const FREE_GOAL_LIMIT = 3;
-export const FREE_BILL_LIMIT = 5;
 
 // Test accounts that always get full Pro access (no payment required).
 export const TEST_PRO_EMAILS = ['waruchojanen@gmail.com', 'techspothubke@gmail.com'];
